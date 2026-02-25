@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Grande Mist — Admin</title>
+    <meta name="description" content="The Grande Mist Resort Administration — Single Page Application">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- ── SESSION CHECK (Supabase Auth) ─────────────────────── -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script>
+        (async function () {
+            // Check Supabase session first, fall back to localStorage
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) window.location.replace('login.html');
+        })();
+    </script>
+
+    <!-- ── APP LAYOUT ─────────────────────────────────────────── -->
+    <div id="app">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" role="navigation" aria-label="Main navigation">
+
+            <!-- Branding — top of sidebar -->
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-logo">GM</div>
+                <div class="sidebar-brand-text">
+                    <span class="brand-name">The Grande Mist</span>
+                    <span class="brand-location">KODAIKANAL · ADMIN</span>
+                </div>
+            </div>
+
+            <!-- Nav links (injected by nav.js) -->
+            <nav class="sidebar__nav" id="sidebar-nav"></nav>
+
+            <!-- Footer watermark -->
+            <div class="sidebar__footer">
+                <span class="sidebar__mist-logo">THE GRANDE MIST · SPA v2</span>
+            </div>
+
+        </aside>
+
+        <!-- MAIN COLUMN -->
+        <div id="page-wrapper">
+
+            <!-- TOP HEADER — admin info only, right-aligned -->
+            <header id="top-header" role="banner">
+                <div class="header__spacer"></div>
+                <div class="header__admin">
+                    <div class="header__admin-info" id="header-admin-info">
+                        <div class="header__admin-name" id="header-name">Admin</div>
+                        <div class="header__admin-role" id="header-role">Manager</div>
+                    </div>
+                    <div class="header__avatar" id="header-avatar">A</div>
+                    <button class="header__logout" id="logout-btn" aria-label="Log out">Log out</button>
+                </div>
+            </header>
+
+            <!-- Page content injected by router -->
+            <main id="main-content" role="main"></main>
+
+        </div><!-- end page-wrapper -->
+
+    </div><!-- end app -->
+
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar toggle arrow — lives outside #app so position:fixed is always
+         relative to the viewport, never trapped by sidebar's transform. -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">‹</button>
+
+
+
+    <!-- ── DATA + UTILS ──────────────────────────────────────── -->
+    <script src="js/room-cache.js"></script>
+    <script src="mockdata.js"></script>
+    <script src="utils.js"></script>
+
+    <!-- ── NAV + ROUTER (after MockData.init()) ───────────────── -->
+    <script src="js/components/nav.js"></script>
+    <script>
+        // Wait for Supabase data before starting router
+        MockData.init().then(() => {
+            const s = document.createElement('script');
+            s.src = 'js/router.js';
+            document.body.appendChild(s);
+        });
+    </script>
+
+</body>
+
+</html>

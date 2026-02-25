@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — The Grande Mist Admin</title>
+  <meta name="description" content="Secure admin login for The Grande Mist resort management system.">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+  <div class="auth-bg"></div>
+
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">GM</div>
+      <h1>The Grande Mist</h1>
+      <span class="auth-logo-sub">Kodaikanal · Est. 1987</span>
+      <p>Resort Administration Portal</p>
+    </div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input class="form-input" type="email" id="email" placeholder="admin@grandemist.in" autocomplete="email"
+          required>
+        <div class="form-error" id="email-err">Please enter a valid email.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="pass-wrap">
+          <input class="form-input" type="password" id="password" placeholder="Enter your password"
+            autocomplete="current-password" required>
+          <button type="button" class="pass-toggle" id="pass-toggle" aria-label="Toggle password visibility">👁</button>
+        </div>
+        <div class="form-error" id="pass-err">Password must be at least 6 characters.</div>
+      </div>
+
+      <div class="auth-meta">
+        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;color:var(--text-secondary);">
+          <input type="checkbox" id="remember-me" style="accent-color:var(--gold-bright);">
+          Remember me
+        </label>
+        <a href="#">Forgot password?</a>
+      </div>
+
+      <button class="btn-primary" type="submit" id="login-btn">
+        Sign In to Dashboard
+      </button>
+    </form>
+  </div>
+
+  <!-- Supabase CDN + Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+
+  <script>
+    const sb = window.supabaseClient;
+
+    // Redirect if already logged in (async check)
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) window.location.replace('index.html#dashboard');
+    })();
+
+    const form = document.getElementById('login-form');
+    const emailEl = document.getElementById('email');
+    const passEl = document.getElementById('password');
+    const btn = document.getElementById('login-btn');
+    const passToggle = document.getElementById('pass-toggle');
+
+    // Password toggle
+    passToggle.addEventListener('click', () => {
+      const t = passEl.type === 'password';
+      passEl.type = t ? 'text' : 'password';
+      passToggle.textContent = t ? '🙈' : '👁';
+    });
+
+    // Toast helper (standalone for auth page)
+    function toast(msg, type = 'success') {
+      let c = document.getElementById('gm-toast-container');
+      if (!c) { c = document.createElement('div'); c.id = 'gm-toast-container'; document.body.appendChild(c); }
+      const t = document.createElement('div');
+      t.className = `gm-toast gm-toast--${type}`;
+      const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+      t.innerHTML = `<span class="gm-toast__icon">${icons[type] || 'ℹ'}</span><span class="gm-toast__msg">${msg}</span>`;
+      c.appendChild(t);
+      requestAnimationFrame(() => t.classList.add('gm-toast--show'));
+      setTimeout(() => {
+        t.classList.remove('gm-toast--show');
+        t.addEventListener('transitionend', () => t.remove(), { once: true });
+      }, 3500);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailEl.value.trim();
+      const pass = passEl.value;
+      let valid = true;
+
+      // Validate email
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      document.getElementById('email-err').classList.toggle('show', !emailOk);
+      emailEl.classList.toggle('error', !emailOk);
+      if (!emailOk) valid = false;
+
+      // Validate password (Supabase requires min 6)
+      const passOk = pass.length >= 6;
+      document.getElementById('pass-err').classList.toggle('show', !passOk);
+      passEl.classList.toggle('error', !passOk);
+      if (!passOk) valid = false;
+
+      if (!valid) return;
+
+      // Sign in with Supabase Auth
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span> Signing in…';
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+      if (error) {
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In to Dashboard';
+        toast(error.message || 'Invalid credentials.', 'error');
+        return;
+      }
+
+      // Store session info for header display
+      const user = data.user;
+      const meta = user.user_metadata || {};
+      localStorage.setItem('gm_session', JSON.stringify({
+        name: meta.name || meta.full_name || email.split('@')[0],
+        role: meta.role || 'Admin',
+        email: user.email,
+        loginAt: new Date().toISOString()
+      }));
+
+      toast('Welcome back! Redirecting…', 'success');
+      setTimeout(() => { window.location.href = 'index.html#dashboard'; }, 800);
+    });
+  </script>
+</body>
+
+</html>
