@@ -153,29 +153,34 @@ a:hover {
 
 /* ── SPA SHELL ────────────────────────────────────────────── */
 #app {
-    display: grid;
-    grid-template-columns: var(--sidebar-w) 1fr;
-    min-height: 100vh;
-    transition: grid-template-columns var(--dur-base) var(--ease);
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
 }
 
-#app.sidebar--collapsed {
-    grid-template-columns: var(--sidebar-collapsed-w) 1fr;
-}
-
-/* page-wrapper spans just the right column */
 #page-wrapper {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    min-width: 0;
-    /* prevent grid blowout */
-    overflow-x: hidden;
-    /* never clip vertically */
+    overflow: hidden;
+    transition: left var(--dur-base) var(--ease);
+}
+
+#app.sidebar--collapsed #page-wrapper {
+    left: var(--sidebar-collapsed-w);
 }
 
 /* ── HEADER ───────────────────────────────────────────────── */
 #top-header {
+    width: 100%;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 99;
     height: var(--header-h);
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
@@ -183,10 +188,6 @@ a:hover {
     align-items: center;
     padding: 0 1.5rem;
     gap: 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    flex-shrink: 0;
 }
 
 .header__logo {
@@ -336,10 +337,11 @@ a:hover {
     border-right: 1px solid var(--border);
     width: var(--sidebar-w);
     height: 100vh;
-    position: sticky;
+    position: fixed;
     top: 0;
-    overflow: hidden;
-    /* nav scrolls inside; toggle is position:fixed */
+    left: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     transition: width var(--dur-base) var(--ease);
@@ -601,8 +603,12 @@ a:hover {
 /* ── MAIN CONTENT ─────────────────────────────────────────── */
 #main-content {
     flex: 1;
-    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     width: 100%;
+    min-height: 0;
+    padding: 1.5rem 0;
+    /* padding handled inside page-content for horizontal */
 }
 
 .page-header {
@@ -2695,21 +2701,48 @@ tbody tr:hover {
         width: 100%;
     }
 
-    /* Sidebar drawer on mobile: slightly narrower */
     #sidebar {
-        width: 240px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 999;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
     }
 
-    /* Full-width main area, no left gap */
+    #sidebar.sidebar--open {
+        transform: translateX(0);
+    }
+
     #page-wrapper {
-        width: 100vw;
+        position: relative;
+        /* override fixed for mobile */
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
         margin-left: 0;
-        overflow-x: hidden;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #top-header {
+        position: sticky;
+        top: 0;
+        z-index: 98;
+        flex-shrink: 0;
+        width: 100%;
     }
 
     #main-content {
+        flex: 1;
+        overflow-y: auto;
+        height: 0;
         width: 100%;
-        overflow-x: hidden;
         padding: 0;
     }
 
@@ -3035,5 +3068,31 @@ tbody tr:hover {
     /* Hide action buttons */
     .bill-actions {
         display: none !important;
+    }
+}
+
+/* ── Desktop Fixes: ≥ 768px ────────────────────────────────── */
+@media (min-width: 768px) {
+    #sidebar {
+        transform: translateX(0) !important;
+    }
+
+    #page-wrapper {
+        margin-left: 0 !important;
+    }
+
+    /* Ensure all page content is visible */
+    .page-content {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Fix any grid or card overflow */
+    .stats-grid,
+    .dash-grid,
+    .room-grid {
+        width: 100%;
+        box-sizing: border-box;
     }
 }
