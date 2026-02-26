@@ -50,7 +50,7 @@
 
     --sidebar-w: 256px;
     --sidebar-collapsed-w: 68px;
-    --header-h: 60px;
+    --header-h: 73px;
     --radius-sm: 6px;
     --radius-md: 12px;
     --radius-lg: 18px;
@@ -179,9 +179,11 @@ a:hover {
 #top-header {
     width: 100%;
     flex-shrink: 0;
+    /* margin-top: 10px; */
     position: relative;
     z-index: 99;
     height: var(--header-h);
+    min-height: var(--header-h);
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -357,6 +359,7 @@ a:hover {
     flex-shrink: 0;
     overflow: hidden;
     white-space: nowrap;
+    min-height: var(--header-h);
 }
 
 .sidebar-brand-logo {
@@ -2776,6 +2779,8 @@ tbody tr:hover {
     }
 
     #top-header {
+        height: var(--header-h);
+        min-height: var(--header-h);
         padding: 0 0.75rem;
     }
 
