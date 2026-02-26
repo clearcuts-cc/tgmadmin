@@ -111,7 +111,7 @@
         <div id="bill-print-area">
           <div class="bill-card">
             <div class="bill-header">
-              <div class="bill-resort-name">The Grande Mist</div>
+              <div class="bill-resort-name">The Grand Mist</div>
               <div class="bill-resort-sub">KODAIKANAL, DINDIGUL &nbsp;·&nbsp; ★★★★</div>
             </div>
 
@@ -199,7 +199,7 @@
         let y = 15; const lm = 15, rw = 130;
 
         doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-        doc.text('THE GRANDE MIST', 73, y, { align: 'center' }); y += 6;
+        doc.text('THE GRAND MIST', 73, y, { align: 'center' }); y += 6;
         doc.setFontSize(8); doc.setFont('helvetica', 'normal');
         doc.text('Kodaikanal, Dindigul | ★★★★', 73, y, { align: 'center' }); y += 8;
         doc.setDrawColor(180); doc.line(lm, y, lm + rw, y); y += 5;

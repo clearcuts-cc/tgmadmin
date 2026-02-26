@@ -130,7 +130,7 @@
     setTimeout(() => {
       GM.btnLoading(btn, false);
       downloadJSON({
-        exportedAt: new Date().toISOString(), resort: 'The Grande Mist', version: '2.0',
+        exportedAt: new Date().toISOString(), resort: 'The Grand Mist', version: '2.0',
         data: {
           rooms,
           guests: MockData.guests,
@@ -167,7 +167,7 @@
           }, 3000);
         } catch (err) {
           GM.btnLoading(btn, false);
-          GM.toast('❌ Cloud sync failed: ' + err.message, 'error');
+          doc.text('THE GRAND MIST — GUEST DATA EXPORT', 105, 12, { align: 'center' });
         }
       }, 'Sync to Cloud');
   });

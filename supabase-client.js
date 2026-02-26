@@ -1,5 +1,5 @@
 // ============================================================
-//  THE GRANDE MIST — SUPABASE CLIENT  (supabase-client.js)
+//  THE GRAND MIST — SUPABASE CLIENT  (supabase-client.js)
 //  Initializes the Supabase JS client for use across the app.
 //  Must load AFTER the Supabase CDN script in index.html.
 // ============================================================

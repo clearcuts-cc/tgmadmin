@@ -5,7 +5,7 @@
   main.innerHTML = `
     <div class="page-header animate-in">
       <h1>New Booking</h1>
-      <p>Register a new guest stay at The Grande Mist</p>
+      <p>Register a new guest stay at The Grand Mist</p>
     </div>
     <div class="page-content">
       <form id="new-booking-form" novalidate>

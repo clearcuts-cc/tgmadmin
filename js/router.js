@@ -1,5 +1,5 @@
 /**
- * router.js — Hash-based SPA router for The Grande Mist Admin
+ * router.js — Hash-based SPA router for The Grand Mist Admin
  * Dynamically loads page modules and injects them into #main-content
  */
 

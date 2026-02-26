@@ -193,7 +193,7 @@
 
               <!-- Header -->
               <div class="bill-header">
-                <div class="bill-resort-name">${s.resortName || 'The Grande Mist'}</div>
+                <div class="bill-resort-name">${s.resortName || 'The Grand Mist'}</div>
                 <div class="bill-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} &nbsp;·&nbsp; ${stars}</div>
                 ${s.resortGSTIN ? `<div class="bill-resort-sub" style="margin-top:0.25rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
               </div>
@@ -441,7 +441,7 @@
         doc.setFillColor(248, 245, 237); doc.rect(0, 0, 148, 28, 'F');
         doc.setFontSize(16); doc.setFont('helvetica', 'bold');
         doc.setTextColor(26, 26, 26);
-        doc.text((s.resortName || 'THE GRANDE MIST').toUpperCase(), 74, 12, { align: 'center' });
+        doc.text((s.resortName || 'THE GRAND MIST').toUpperCase(), 74, 12, { align: 'center' });
         doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
         doc.text(`${(s.resortAddress || 'KODAIKANAL, DINDIGUL').toUpperCase()}  ·  ${stars}`, 74, 17, { align: 'center' });
         if (s.resortGSTIN) doc.text(`GSTIN: ${s.resortGSTIN}`, 74, 21, { align: 'center' });

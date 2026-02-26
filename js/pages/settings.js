@@ -7,7 +7,7 @@
   const STORAGE_KEY = 'gm_settings';
 
   const DEFAULTS = {
-    resortName: 'The Grande Mist',
+    resortName: 'The Grand Mist',
     resortAddress: 'Kodaikanal, Dindigul, Tamil Nadu',
     resortPhone: '+91 98765 43210',
     resortEmail: 'info@grandemist.com',
@@ -17,7 +17,7 @@
     roomGST: 12,
     foodGST: 5,
     billPrefix: 'GM-2026',
-    billFooter: 'Thank you for staying at The Grande Mist!',
+    billFooter: 'Thank you for staying at The Grand Mist!',
   };
 
   function loadAll() {

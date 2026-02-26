@@ -1,5 +1,5 @@
 // ============================================================
-//  THE GRANDE MIST — SUPABASE DATA STORE  (mockdata.js)
+//  THE GRAND MIST — SUPABASE DATA STORE  (mockdata.js)
 //  All data lives in Supabase. In-memory cache keeps the API
 //  synchronous for page modules. Realtime keeps it live.
 // ============================================================

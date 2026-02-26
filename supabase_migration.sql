@@ -1,5 +1,5 @@
 -- ============================================================
---  THE GRANDE MIST — SUPABASE MIGRATION
+--  THE GRAND MIST — SUPABASE MIGRATION
 --  Complete database schema for hotel management system
 --  Run this in Supabase SQL Editor → New Query
 -- ============================================================
