@@ -148,6 +148,8 @@
 
     const billNo = `GM-${new Date().getFullYear()}-${String(MockData.completedBills.length + 1).padStart(4, '0')}`;
     const generatedAt = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const s = window.GMSettings ? window.GMSettings.getAll() : {};
+    const stars = '★'.repeat(s.resortStars || 4);
 
     main.innerHTML = `
         <style>
@@ -191,8 +193,9 @@
 
               <!-- Header -->
               <div class="bill-header">
-                <div class="bill-resort-name">The Grande Mist</div>
-                <div class="bill-resort-sub">KODAIKANAL, DINDIGUL &nbsp;·&nbsp; ★★★★</div>
+                <div class="bill-resort-name">${s.resortName || 'The Grande Mist'}</div>
+                <div class="bill-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} &nbsp;·&nbsp; ${stars}</div>
+                ${s.resortGSTIN ? `<div class="bill-resort-sub" style="margin-top:0.25rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
               </div>
 
               <!-- Guest info grid -->
@@ -268,7 +271,7 @@
               <!-- Totals -->
               <div class="bill-total-section">
                 <div class="bill-total-row">
-                  <span>Total Collected (all payments)</span>
+                  <span>Total Collected (incl. GST)</span>
                   <span>${GM.fmt.currency(grandTotal)}</span>
                 </div>
                 <div class="bill-grand-total">
@@ -438,9 +441,10 @@
         doc.setFillColor(248, 245, 237); doc.rect(0, 0, 148, 28, 'F');
         doc.setFontSize(16); doc.setFont('helvetica', 'bold');
         doc.setTextColor(26, 26, 26);
-        doc.text('THE GRANDE MIST', 74, 12, { align: 'center' });
+        doc.text((s.resortName || 'THE GRANDE MIST').toUpperCase(), 74, 12, { align: 'center' });
         doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
-        doc.text('KODAIKANAL, DINDIGUL  ·  ★★★★', 74, 19, { align: 'center' });
+        doc.text(`${(s.resortAddress || 'KODAIKANAL, DINDIGUL').toUpperCase()}  ·  ${stars}`, 74, 17, { align: 'center' });
+        if (s.resortGSTIN) doc.text(`GSTIN: ${s.resortGSTIN}`, 74, 21, { align: 'center' });
         doc.setDrawColor(212, 175, 55); doc.setLineWidth(0.5); doc.line(0, 28, 148, 28);
         y = 36;
 

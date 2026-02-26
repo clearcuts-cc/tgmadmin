@@ -14,6 +14,8 @@
     resortGSTIN: '',
     resortStars: 4,
     showPaymentMethod: true,
+    roomGST: 12,
+    foodGST: 5,
     billPrefix: 'GM-2026',
     billFooter: 'Thank you for staying at The Grande Mist!',
   };
@@ -441,6 +443,16 @@
             </div>
 
             <div class="settings-field">
+              <label for="roomGST">Room GST (%)</label>
+              <input type="number" id="roomGST" value="${s.roomGST}" min="0" max="100">
+            </div>
+
+            <div class="settings-field">
+              <label for="foodGST">Food GST (%)</label>
+              <input type="number" id="foodGST" value="${s.foodGST}" min="0" max="100">
+            </div>
+
+            <div class="settings-field">
               <label for="billFooter">Bill Footer Note</label>
               <input type="text" id="billFooter" value="${s.billFooter}">
             </div>
@@ -600,6 +612,8 @@
       resortGSTIN: document.getElementById('resortGSTIN').value.trim(),
       resortStars: parseInt(document.getElementById('resortStars').value) || 4,
       showPaymentMethod: document.getElementById('showPaymentMethod').checked,
+      roomGST: parseFloat(document.getElementById('roomGST').value) || 0,
+      foodGST: parseFloat(document.getElementById('foodGST').value) || 0,
       billPrefix: document.getElementById('billPrefix').value.trim(),
       billFooter: document.getElementById('billFooter').value.trim(),
     };

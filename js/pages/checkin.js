@@ -192,13 +192,17 @@
               <div class="bill-section">
                 <div class="bill-section__title">Charge Breakdown</div>
                 <div class="bill-row">
-                  <span>${room.type} — ${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)}</span>
-                  <strong style="color:var(--gold-bright);font-size:1.05rem;">${GM.fmt.currency(roomTotal)}</strong>
+                  <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)})</span>
+                  <strong>${GM.fmt.currency(roomTotal)}</strong>
+                </div>
+                <div class="bill-row">
+                  <span id="ci-gst-label">Room GST (0%)</span>
+                  <strong id="ci-gst-amount">₹0</strong>
                 </div>
               </div>
               <div class="bill-grand" style="margin-bottom:1.25rem;">
                 <span class="bill-grand__label">Amount to Collect</span>
-                <span class="bill-grand__value">${GM.fmt.currency(roomTotal)}</span>
+                <span class="bill-grand__value" id="ci-grand-total">${GM.fmt.currency(roomTotal)}</span>
               </div>
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;" id="payment-form-grid">
@@ -241,6 +245,14 @@
           </div>
         </div>`;
 
+    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const gstAmount = Math.round(roomTotal * (roomGST / 100));
+    const grandTotal = roomTotal + gstAmount;
+
+    document.getElementById('ci-gst-label').textContent = `Room GST (${roomGST}%)`;
+    document.getElementById('ci-gst-amount').textContent = GM.fmt.currency(gstAmount);
+    document.getElementById('ci-grand-total').textContent = GM.fmt.currency(grandTotal);
+
     // Responsive grids
     const infoGrid = document.getElementById('checkin-info-grid');
     const payGrid = document.getElementById('payment-form-grid');
@@ -257,8 +269,12 @@
       const method = document.getElementById('ci-payment-method').value;
       const ref = document.getElementById('ci-payment-ref').value.trim();
 
+      const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+      const gstAmount = Math.round(roomTotal * (roomGST / 100));
+      const grandTotal = roomTotal + gstAmount;
+
       GM.confirm('Confirm Check-in & Payment',
-        `Collect ${GM.fmt.currency(roomTotal)} (${method}) from ${booking.guestName} and check in to Room ${room.number}?`,
+        `Collect ${GM.fmt.currency(grandTotal)} (${method}) from ${booking.guestName} and check in to Room ${room.number}?`,
         async () => {
           const btn = document.getElementById('confirm-checkin');
           GM.btnLoading(btn, true);
@@ -269,7 +285,7 @@
             document.getElementById('checkin-success').classList.remove('hidden');
             document.getElementById('payment-section').classList.add('hidden');
             btn.classList.add('hidden');
-            GM.toast(`✔ ${booking.guestName} checked in to Room ${room.number} · ${GM.fmt.currency(roomTotal)} via ${method}`, 'success');
+            GM.toast(`✔ ${booking.guestName} checked in to Room ${room.number} · ${GM.fmt.currency(grandTotal)} via ${method}`, 'success');
           } catch (err) {
             console.error('Check-in error:', err);
             // Error toast shown by MockData

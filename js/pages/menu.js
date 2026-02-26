@@ -8,6 +8,7 @@
         <div>
           <h1>Food Menu</h1>
           <p>Manage menu items by category • Toggle availability anytime</p>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;">* All prices are exclusive of GST</p>
         </div>
         <button class="btn btn--primary" id="add-item-btn">＋ Add Menu Item</button>
       </div>

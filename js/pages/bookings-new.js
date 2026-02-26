@@ -92,6 +92,10 @@
               <div id="stay-summary" style="background:var(--bg-raised);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:0.75rem;display:none;">
                 <div class="bill-row"><span>Nights</span><strong id="sum-nights">—</strong></div>
                 <div class="bill-row"><span>Rate per night</span><strong id="sum-rate">—</strong></div>
+                <div class="bill-row" style="border-top:1px dashed var(--border);margin-top:0.4rem;padding-top:0.4rem;">
+                  <span>Subtotal</span><strong id="sum-subtotal">—</strong>
+                </div>
+                <div class="bill-row"><span id="sum-gst-label">Room GST (0%)</span><strong id="sum-gst-amount">—</strong></div>
                 <div class="bill-row" style="border-top:1px solid var(--border);margin-top:0.4rem;padding-top:0.4rem;">
                   <span style="color:var(--gold-bright);">Estimated Total</span>
                   <strong id="sum-total" style="color:var(--gold-bright);">—</strong>
@@ -210,9 +214,17 @@
     if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) { summary.style.display = 'none'; return; }
     const room = rooms.find(r => r.id === roomId);
     const nights = GM.nights(checkIn, checkOut);
+    const subtotal = nights * room.rate;
+    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const gstAmount = Math.round(subtotal * (roomGST / 100));
+    const total = subtotal + gstAmount;
+
     document.getElementById('sum-nights').textContent = nights + ' nights';
     document.getElementById('sum-rate').textContent = GM.fmt.currency(room.rate);
-    document.getElementById('sum-total').textContent = GM.fmt.currency(nights * room.rate);
+    document.getElementById('sum-subtotal').textContent = GM.fmt.currency(subtotal);
+    document.getElementById('sum-gst-label').textContent = `Room GST (${roomGST}%)`;
+    document.getElementById('sum-gst-amount').textContent = GM.fmt.currency(gstAmount);
+    document.getElementById('sum-total').textContent = GM.fmt.currency(total);
     summary.style.display = 'block';
   }
   roomSelect.addEventListener('change', updateSummary);

@@ -559,7 +559,11 @@ const MockData = (() => {
 
         async startStay(booking, room, paymentMethod, paymentRef) {
             const n = MockData.nightsBetween(booking.checkIn, booking.checkOut);
-            const amount = n * room.rate;
+            const subtotal = n * room.rate;
+            const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+            const gstAmount = Math.round(subtotal * (roomGST / 100));
+            const amount = subtotal + gstAmount;
+
             const stayId = 'STAY-' + Date.now();
             const dbId = crypto.randomUUID();
             const paymentDbId = crypto.randomUUID();
@@ -573,7 +577,7 @@ const MockData = (() => {
                 rate: Number(room.rate),
                 payments: [{
                     _dbId: paymentDbId, type: 'room',
-                    description: `Room charges — ${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)}`,
+                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)}) + GST ${roomGST}%`,
                     amount: Number(amount),
                     paidAt: new Date().toISOString(),
                     method: paymentMethod, ref: paymentRef || '',

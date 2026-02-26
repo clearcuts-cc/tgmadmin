@@ -49,9 +49,13 @@
               <button class="btn btn--sm btn--ghost" id="clear-order-btn">Clear</button>
             </div>
             <div id="order-items-list"></div>
-            <div class="bill-grand" id="order-total-box" style="margin-top:1rem;">
-              <span class="bill-grand__label">Running Total</span>
-              <span class="bill-grand__value" id="order-total">₹0</span>
+            <div id="order-summary-box" style="margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--border);">
+              <div class="bill-row"><span>Subtotal</span><span id="order-subtotal">₹0</span></div>
+              <div class="bill-row"><span id="order-gst-label">GST (0%)</span><span id="order-gst-amount">₹0</span></div>
+              <div class="bill-grand" id="order-total-box" style="margin-top:0.5rem;">
+                <span class="bill-grand__label">Order Total</span>
+                <span class="bill-grand__value" id="order-total">₹0</span>
+              </div>
             </div>
             <button class="btn btn--primary btn--full mt-md" id="place-order-btn" disabled>Place Order &amp; Collect Payment</button>
           </div>
@@ -76,9 +80,13 @@
           <button class="modal__close" id="order-modal-close">✕</button>
         </div>
         <div class="modal__body">
-          <div class="bill-grand" style="margin-bottom:1.25rem;">
-            <span class="bill-grand__label">Order Total</span>
-            <span class="bill-grand__value" id="modal-order-total">₹0</span>
+          <div id="modal-order-breakdown" style="background:var(--bg-raised);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.25rem;">
+            <div class="bill-row"><span>Subtotal</span><span id="modal-subtotal">₹0</span></div>
+            <div class="bill-row"><span id="modal-gst-label">GST (0%)</span><span id="modal-gst-amount">₹0</span></div>
+            <div class="bill-grand" style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">
+              <span class="bill-grand__label">Grand Total</span>
+              <span class="bill-grand__value" id="modal-order-total">₹0</span>
+            </div>
           </div>
           <div id="modal-order-summary" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-secondary);"></div>
           <div class="form-group">
@@ -183,16 +191,20 @@
   }
 
   function renderCurrentOrder() {
+    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
     if (currentOrder.length === 0) {
       orderItemsList.innerHTML = `<div class="empty-state" style="padding:1rem 0;"><span>🍽</span>No items added yet.</div>`;
+      document.getElementById('order-subtotal').textContent = '₹0';
+      document.getElementById('order-gst-amount').textContent = '₹0';
+      document.getElementById('order-gst-label').textContent = `GST (${foodGST}%)`;
       orderTotalEl.textContent = '₹0';
       placeOrderBtn.disabled = true;
       return;
     }
-    let total = 0;
+    let subtotal = 0;
     orderItemsList.innerHTML = `<div style="display:flex;flex-direction:column;gap:0.4rem;">
       ${currentOrder.map((o, i) => {
-      const sub = o.price * o.qty; total += sub;
+      const sub = o.price * o.qty; subtotal += sub;
       return `
           <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid var(--border);">
             <div style="flex:1;font-size:0.875rem;">${o.name}</div>
@@ -206,6 +218,13 @@
           </div>`;
     }).join('')}
     </div>`;
+
+    const gstAmount = Math.round(subtotal * (foodGST / 100));
+    const total = subtotal + gstAmount;
+
+    document.getElementById('order-subtotal').textContent = GM.fmt.currency(subtotal);
+    document.getElementById('order-gst-amount').textContent = GM.fmt.currency(gstAmount);
+    document.getElementById('order-gst-label').textContent = `GST (${foodGST}%)`;
     orderTotalEl.textContent = GM.fmt.currency(total);
     placeOrderBtn.disabled = !selectedBooking;
   }
@@ -216,8 +235,16 @@
 
   placeOrderBtn.addEventListener('click', () => {
     if (!selectedBooking || currentOrder.length === 0) return;
-    pendingOrderTotal = getOrderTotal();
+    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
+    const subtotal = currentOrder.reduce((s, o) => s + o.price * o.qty, 0);
+    const gstAmount = Math.round(subtotal * (foodGST / 100));
+    pendingOrderTotal = subtotal + gstAmount;
+
+    document.getElementById('modal-subtotal').textContent = GM.fmt.currency(subtotal);
+    document.getElementById('modal-gst-amount').textContent = GM.fmt.currency(gstAmount);
+    document.getElementById('modal-gst-label').textContent = `GST (${foodGST}%)`;
     document.getElementById('modal-order-total').textContent = GM.fmt.currency(pendingOrderTotal);
+
     document.getElementById('modal-order-summary').innerHTML = currentOrder
       .map(o => `<div>• ${o.name} ×${o.qty} — ${GM.fmt.currency(o.price * o.qty)}</div>`).join('');
     document.getElementById('food-payment-ref').value = '';
