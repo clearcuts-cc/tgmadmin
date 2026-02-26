@@ -264,7 +264,7 @@
                 <span style="font-size:1rem;font-weight:500;">Apply Overall Discount</span>
                 <div>
                   <input type="number" id="discount" value="0" min="0" placeholder="0" class="form-input" style="width:120px;text-align:right;">
-                  <span class="bill-print-value">₹<span id="discount-val">0</span></span>
+                  <span class="print-value">₹<span id="discount-val">0</span></span>
                 </div>
               </div>
 
@@ -296,7 +296,6 @@
           <!-- Action buttons -->
           <div id="bill-actions" class="bill-actions" style="max-width:720px;margin:1.25rem auto 0;display:flex;gap:1rem;flex-wrap:wrap;">
             <button class="btn btn--ghost" id="print-bill-btn">🖨 Print Bill</button>
-            <button class="btn btn--ghost" id="save-pdf-btn">💾 Save as PDF</button>
             <button class="btn btn--primary btn--lg" id="confirm-checkout-btn" style="margin-left:auto;">↩ Confirm Check-out</button>
           </div>
 
@@ -417,108 +416,6 @@
       window.print();
     });
 
-    // PDF
-    document.getElementById('save-pdf-btn').addEventListener('click', async () => {
-      syncPrintValues();
-      const btn = document.getElementById('save-pdf-btn');
-      GM.btnLoading(btn, true);
-      if (!window.jspdf) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-          s.onload = res; s.onerror = rej;
-          document.head.appendChild(s);
-        });
-      }
-      try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'mm', format: 'a5' });
-        const extra = addedCharges.reduce((s, c) => s + c.amount, 0);
-        const disc = parseFloat(discountInput.value) || 0;
-        let y = 15; const lm = 14, rw = 134;
-
-        // Header
-        doc.setFillColor(248, 245, 237); doc.rect(0, 0, 148, 28, 'F');
-        doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-        doc.setTextColor(26, 26, 26);
-        doc.text((s.resortName || 'THE GRAND MIST').toUpperCase(), 74, 12, { align: 'center' });
-        doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
-        doc.text(`${(s.resortAddress || 'KODAIKANAL, DINDIGUL').toUpperCase()}  ·  ${stars}`, 74, 17, { align: 'center' });
-        if (s.resortGSTIN) doc.text(`GSTIN: ${s.resortGSTIN}`, 74, 21, { align: 'center' });
-        doc.setDrawColor(212, 175, 55); doc.setLineWidth(0.5); doc.line(0, 28, 148, 28);
-        y = 36;
-
-        // Guest info
-        doc.setTextColor(26, 26, 26); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-        doc.text(`Guest: `, lm, y); doc.setFont('helvetica', 'bold'); doc.text(booking.guestName, lm + 14, y);
-        doc.setFont('helvetica', 'normal'); doc.text(`Room: `, 85, y); doc.setFont('helvetica', 'bold'); doc.text(`${booking.roomNumber} — ${room.type}`, 97, y); y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Check-in: ${GM.fmt.date(booking.checkIn)}`, lm, y);
-        doc.text(`Check-out: ${GM.fmt.date(booking.checkOut)}  (${nights} nights)`, 85, y); y += 4;
-        doc.setDrawColor(220); doc.setLineWidth(0.2); doc.line(lm, y, lm + rw, y); y += 5;
-
-        const sections = [
-          { title: 'ROOM CHARGES', items: roomPays },
-          { title: 'FOOD ORDERS', items: foodPays },
-          { title: 'EVENTS', items: eventPays },
-          { title: 'EXTRA SERVICES', items: pays.filter(p => p.type === 'extra') },
-        ];
-        sections.forEach(({ title, items }) => {
-          if (!items.length) return;
-          doc.setFillColor(240, 240, 240); doc.rect(lm - 2, y - 4, rw + 4, 7, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(60);
-          doc.text(title, lm, y); y += 5;
-          items.forEach(p => {
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(26, 26, 26);
-            doc.text(p.description, lm + 2, y);
-            doc.text(GM.fmt.currency(p.amount), lm + rw, y, { align: 'right' });
-            // Paid badge
-            doc.setFontSize(6); doc.setTextColor(22, 101, 52);
-            doc.text('✓ PAID', lm + rw - 22, y); y += 4.5;
-            doc.setFontSize(7); doc.setTextColor(120);
-            doc.text(`${fmtPaidAt(p.paidAt)}  ·  ${p.method}`, lm + 2, y); y += 5.5;
-          });
-        });
-
-        // Adjustments (Due charges and Discounts)
-        const dueCharges = addedCharges.filter(c => !c.isPaid);
-        if (dueCharges.length || disc) {
-          doc.setDrawColor(220); doc.line(lm, y, lm + rw, y); y += 4;
-          doc.setFontSize(7); doc.setTextColor(60); doc.setFont('helvetica', 'bold');
-          doc.text('ADJUSTMENTS', lm, y); y += 5;
-          dueCharges.forEach(c => {
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(26, 26, 26);
-            doc.text(c.name, lm + 2, y);
-            doc.text(GM.fmt.currency(c.amount), lm + rw, y, { align: 'right' });
-            doc.setFontSize(6); doc.setTextColor(153, 27, 27);
-            doc.text('! DUE', lm + rw - 22, y); y += 5;
-          });
-          if (disc) {
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(26, 26, 26);
-            doc.text('Total Discount', lm + 2, y);
-            doc.text(`- ${GM.fmt.currency(disc)}`, lm + rw, y, { align: 'right' }); y += 5;
-          }
-        }
-
-        // Final Totals
-        y = Math.max(y, 165);
-        doc.setDrawColor(212, 175, 55); doc.setLineWidth(0.5); doc.line(lm, y, lm + rw, y); y += 6;
-        doc.setTextColor(26, 26, 26); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-        doc.text('GRAND TOTAL', lm, y);
-        doc.text(GM.fmt.currency(grandTotal + (parseFloat(document.getElementById('extra-charges').value) || 0) - disc), lm + rw, y, { align: 'right' }); y += 5;
-
-        doc.setFontSize(8); doc.setTextColor(100);
-        const balPayable = calcBalance();
-        doc.text(balPayable > 0 ? `Balance Payable: ${GM.fmt.currency(balPayable)}` : 'Balance: ₹0 (Fully Paid)', lm, y); y += 8;
-        doc.setTextColor(160); doc.setFontSize(7);
-        doc.text(`Bill No: ${billNo}   ·   ${generatedAt}`, lm, y);
-
-        doc.save(`GrandeMist-Bill-${booking.guestName.replace(/\s+/g, '_')}-${new Date().toISOString().slice(0, 10)}.pdf`);
-      } catch (err) {
-        GM.toast('PDF failed: ' + err.message, 'error');
-      }
-      GM.btnLoading(btn, false);
-    });
 
     // Confirm checkout
     document.getElementById('confirm-checkout-btn').addEventListener('click', async () => {
