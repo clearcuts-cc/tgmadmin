@@ -13,6 +13,11 @@
     /* Expose role globally so all page modules + nav can read it */
     window.GMRole = (session.role || 'admin').toLowerCase();
 
+    // Rebuild nav now that we know the user's role (hides admin-only items for employees)
+    if (window.GMNav && window.GMNav.buildNav) {
+        window.GMNav.buildNav();
+    }
+
     /* Permission helpers — employees can only add, not edit/delete */
     window.GMCan = {
         edit: () => window.GMRole !== 'employee',

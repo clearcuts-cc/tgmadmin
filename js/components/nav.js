@@ -93,5 +93,5 @@
     }
 
     buildNav();
-    window.GMNav = { highlightNav };
+    window.GMNav = { highlightNav, buildNav };
 })();
