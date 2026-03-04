@@ -16,7 +16,7 @@
     <div class="auth-logo">
       <div class="auth-logo-mark">GM</div>
       <h1>The Grand Mist</h1>
-      <span class="auth-logo-sub">Kodaikanal · Est. 1987</span>
+      <span class="auth-logo-sub">Kodaikanal · Est. 2026</span>
       <p>Resort Administration Portal</p>
     </div>
 
@@ -130,9 +130,11 @@
       // Store session info for header display
       const user = data.user;
       const meta = user.user_metadata || {};
+      // role stored in metadata: 'admin' or 'employee' (lowercase)
+      const role = (meta.role || 'admin').toLowerCase();
       localStorage.setItem('gm_session', JSON.stringify({
         name: meta.name || meta.full_name || email.split('@')[0],
-        role: meta.role || 'Admin',
+        role: role,
         email: user.email,
         loginAt: new Date().toISOString()
       }));

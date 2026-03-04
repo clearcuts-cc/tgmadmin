@@ -121,7 +121,10 @@
     const roomPays = payments.filter(p => p.type === 'room');
     const foodPays = payments.filter(p => p.type === 'food');
     const eventPays = payments.filter(p => p.type === 'event');
-    const grandTotal = payments.reduce((s, p) => s + p.amount, 0);
+    const advancePays = payments.filter(p => p.type === 'advance');
+    const advanceTotal = advancePays.reduce((s, p) => s + p.amount, 0); // negative sum
+    const grandTotal = payments.filter(p => p.type !== 'advance').reduce((s, p) => s + p.amount, 0);
+    const netTotal = grandTotal + advanceTotal; // advance is negative so this reduces total
 
     function fmtPaidAt(iso) {
       try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
@@ -230,6 +233,21 @@
               <div class="bill-section-header">🎉 &nbsp;Events</div>
               ${eventPays.length ? eventPays.map(lineRow).join('') : emptySection()}
 
+              <!-- Advance Paid Deduction -->
+              ${advancePays.length ? `
+              <div class="bill-section-header" style="color:rgba(100,220,120,0.9);">💚 &nbsp;Advance Paid</div>
+              ${advancePays.map(p => `
+              <div class="bill-line-row">
+                <div class="bill-line-left">
+                  <div class="bill-line-title" style="color:rgba(100,220,120,0.9);">${p.description}</div>
+                  <div class="bill-line-meta">${fmtPaidAt(p.paidAt)} · ${p.method}</div>
+                </div>
+                <div class="bill-line-right">
+                  <span class="bill-amount" style="color:rgba(100,220,120,0.9);">-${GM.fmt.currency(Math.abs(p.amount))}</span>
+                  <span class="bill-paid-badge" style="background:rgba(100,220,120,0.15);color:rgba(100,220,120,0.9);">✓ DEDUCTED</span>
+                </div>
+              </div>`).join('')}` : ''}
+
               <!-- Adjustments Container (reflected on card) -->
               <div id="bill-adjustments-card">
                 <div class="bill-section-header">⚖ &nbsp;Adjustments</div>
@@ -274,9 +292,24 @@
                   <span>Total Collected (incl. GST)</span>
                   <span>${GM.fmt.currency(grandTotal)}</span>
                 </div>
+                ${advanceTotal < 0 ? `
+                <div class="bill-total-row" style="color:rgba(100,220,120,0.9);">
+                  <span>Advance Paid</span>
+                  <span>-${GM.fmt.currency(Math.abs(advanceTotal))}</span>
+                </div>
+                <div class="bill-total-row" style="opacity:0.6;font-size:0.85rem;">
+                  <span>Net Remaining</span>
+                  <span>${GM.fmt.currency(netTotal)}</span>
+                </div>` : ''}
                 <div class="bill-grand-total">
                   <span>Grand Total</span>
-                  <span id="grand-total-display">${GM.fmt.currency(grandTotal)}</span>
+                  <span id="grand-total-display">${GM.fmt.currency(netTotal)}</span>
+                </div>
+                <div class="bill-adjustment-row" style="padding:0.75rem 0;border-top:1px dashed rgba(255,255,255,0.1);">
+                  <span style="font-size:1rem;font-weight:500;color:rgba(100,220,120,0.9);">💵 Amount Paid Now</span>
+                  <div>
+                    <input type="number" id="paid-now" value="0" min="0" placeholder="0" class="form-input" style="width:130px;text-align:right;">
+                  </div>
                 </div>
                 <div class="bill-balance" id="balance-row">
                   <span>Balance Due</span>
@@ -391,9 +424,10 @@
       if (discValEl) discValEl.textContent = disc;
       const totalExtra = addedCharges.reduce((s, c) => s + c.amount, 0);
       const totalDue = addedCharges.filter(c => !c.isPaid).reduce((s, c) => s + c.amount, 0);
+      const paidNow = parseFloat(document.getElementById('paid-now')?.value) || 0;
       const adj = totalExtra - disc;
-      const balance = Math.max(0, totalDue - disc);
-      grandDisplay.textContent = GM.fmt.currency(grandTotal + adj);
+      const balance = Math.max(0, netTotal + totalDue - disc - paidNow);
+      grandDisplay.textContent = GM.fmt.currency(netTotal + adj);
       balanceEl.textContent = GM.fmt.currency(balance);
       balanceRow.className = 'bill-balance' + (balance > 0 ? ' bill-balance--due' : '');
       const hiddenEc = document.getElementById('extra-charges');
@@ -401,6 +435,7 @@
       return balance;
     }
     discountInput.addEventListener('input', calcBalance);
+    document.getElementById('paid-now').addEventListener('input', calcBalance);
     calcBalance();
 
     function syncPrintValues() {
@@ -445,7 +480,20 @@
               }
             }
 
-            // 2. Pass only Due charges to completeStay
+            // 2. Record "Amount Paid Now" if entered
+            const paidNow = parseFloat(document.getElementById('paid-now')?.value) || 0;
+            if (paidNow > 0) {
+              await MockData.addPaymentToStay(booking.id, {
+                type: 'extra',
+                description: `Payment received at checkout`,
+                amount: paidNow,
+                method: 'Cash',
+                ref: 'Checkout Counter',
+                paidAt: new Date().toISOString()
+              });
+            }
+
+            // 3. Pass only Due charges to completeStay
             const dueExtrasTotal = addedCharges.filter(c => !c.isPaid).reduce((s, c) => s + c.amount, 0);
             const bill = await MockData.completeStay(booking.id, dueExtrasTotal, disc);
 

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified — The Grand Mist</title>
+    <meta name="description" content="Email verification for The Grand Mist staff portal">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b0d17;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ── Ambient glows ── */
+        .glow {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(80px);
+        }
+
+        .glow-gold {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(212, 168, 83, 0.12) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        .glow-teal {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(42, 191, 176, 0.06) 0%, transparent 70%);
+            bottom: 10%;
+            right: 10%;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.6;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.08);
+            }
+        }
+
+        /* ── Particles ── */
+        .particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(212, 168, 83, 0.5);
+            border-radius: 50%;
+            animation: float-up linear infinite;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(-100vh) scale(0.5);
+                opacity: 0;
+            }
+        }
+
+        /* ── Card ── */
+        .card {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(212, 168, 83, 0.18);
+            border-radius: 28px;
+            padding: 3rem 2.5rem 2.5rem;
+            max-width: 420px;
+            width: 92%;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+            animation: card-in 0.5s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        @keyframes card-in {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ── Brand ── */
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-bottom: 2rem;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #B8923E, #D4A853);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #1a1209;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Icon ring ── */
+        .icon-ring {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .icon-ring.loading {
+            background: rgba(212, 168, 83, 0.08);
+            border: 2px solid rgba(212, 168, 83, 0.2);
+        }
+
+        .icon-ring.success {
+            background: rgba(42, 191, 176, 0.08);
+            border: 2px solid rgba(42, 191, 176, 0.3);
+            animation: ring-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .icon-ring.error {
+            background: rgba(255, 80, 80, 0.08);
+            border: 2px solid rgba(255, 80, 80, 0.25);
+        }
+
+        @keyframes ring-pop {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 3px solid rgba(212, 168, 83, 0.15);
+            border-top-color: #D4A853;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Checkmark SVG */
+        .check-svg {
+            width: 46px;
+            height: 46px;
+        }
+
+        .check-circle {
+            stroke: #2abfb0;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 126;
+            stroke-dashoffset: 126;
+            animation: draw-circle 0.5s ease forwards;
+        }
+
+        .check-tick {
+            stroke: #2abfb0;
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 30;
+            stroke-dashoffset: 30;
+            animation: draw-tick 0.4s 0.4s ease forwards;
+        }
+
+        @keyframes draw-circle {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes draw-tick {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* ── Headings ── */
+        h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        h1.loading-h {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        h1.success-h {
+            background: linear-gradient(135deg, #2abfb0, #5de8e0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1.error-h {
+            background: linear-gradient(135deg, #ff6b6b, #ff9494);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sub {
+            font-size: 0.84rem;
+            color: rgba(255, 255, 255, 0.38);
+            line-height: 1.65;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ── Welcome badge ── */
+        .welcome-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: rgba(212, 168, 83, 0.09);
+            border: 1px solid rgba(212, 168, 83, 0.22);
+            border-radius: 40px;
+            padding: 0.45rem 1.1rem;
+            font-size: 0.83rem;
+            color: #D4A853;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            animation: badge-in 0.4s 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+        }
+
+        @keyframes badge-in {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ── Redirect info ── */
+        .redirect-box {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+            animation: fade-up 0.3s 0.9s ease both;
+        }
+
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .countdown-num {
+            color: #D4A853;
+            font-weight: 700;
+            font-size: 1rem;
+            min-width: 1ch;
+        }
+
+        /* Progress bar */
+        .prog-track {
+            height: 3px;
+            background: rgba(212, 168, 83, 0.12);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .prog-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #B8923E, #D4A853);
+            border-radius: 2px;
+            width: 0%;
+        }
+
+        /* ── Links ── */
+        .go-now {
+            display: inline-block;
+            margin-top: 1.25rem;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.28);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .go-now:hover {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .go-now span {
+            color: #D4A853;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .back-link span {
+            color: #D4A853;
+        }
+
+        /* General fade-in */
+        .fi {
+            animation: fade-up 0.35s ease both;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Ambient -->
+    <div class="glow glow-gold"></div>
+    <div class="glow glow-teal"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Card -->
+    <div class="card" id="card">
+        <div class="brand">
+            <div class="brand-mark">GM</div>
+            <span class="brand-name">THE GRAND MIST</span>
+        </div>
+
+        <!-- Loading state (default) -->
+        <div id="st-loading">
+            <div class="icon-ring loading">
+                <div class="spinner"></div>
+            </div>
+            <h1 class="loading-h">Verifying your email…</h1>
+            <p class="sub">Please wait while we confirm your email address.</p>
+        </div>
+
+        <!-- Success state -->
+        <div id="st-success" style="display:none"></div>
+
+        <!-- Error state -->
+        <div id="st-error" style="display:none"></div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+
+    <script>
+        const sb = window.supabaseClient;
+
+        /* ── Floating particles ── */
+        (function spawnParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 18; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.cssText = `
+          left:${Math.random() * 100}%;
+          bottom:${-Math.random() * 20}%;
+          animation-duration:${6 + Math.random() * 10}s;
+          animation-delay:${Math.random() * 8}s;
+          width:${1 + Math.random() * 2}px;
+          height:${1 + Math.random() * 2}px;
+          opacity:${0.3 + Math.random() * 0.5};
+        `;
+                container.appendChild(p);
+            }
+        })();
+
+        /* ── Show success ── */
+        function showSuccess(name, email) {
+            const display = name || (email ? email.split('@')[0] : '');
+            document.getElementById('st-success').innerHTML = `
+        <div class="icon-ring success">
+          <svg class="check-svg" viewBox="0 0 46 46">
+            <circle class="check-circle" cx="23" cy="23" r="20"/>
+            <path class="check-tick" d="M14 23l7 7 11-13"/>
+          </svg>
+        </div>
+        <h1 class="success-h fi">Email Verified!</h1>
+        <p class="sub fi" style="animation-delay:.1s">
+          Your account is confirmed and ready to use.
+        </p>
+        ${display ? `<div class="welcome-badge">👋 Welcome, ${display}!</div>` : ''}
+        <div class="redirect-box">
+          <span>↗</span>
+          Redirecting to dashboard in
+          <span class="countdown-num" id="cd">3</span>s
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
+        <a href="index.html#dashboard" class="go-now">
+          Or <span>click here</span> to go now
+        </a>
+      `;
+            document.getElementById('st-loading').style.display = 'none';
+            document.getElementById('st-success').style.display = 'block';
+
+            /* Countdown & progress bar */
+            const DURATION = 3000;
+            const start = Date.now();
+            const cdEl = document.getElementById('cd');
+            const progEl = document.getElementById('prog');
+
+            function tick() {
+                const elapsed = Date.now() - start;
+                const pct = Math.min((elapsed / DURATION) * 100, 100);
+                if (progEl) progEl.style.width = pct + '%';
+                if (cdEl) cdEl.textContent = Math.max(0, Math.ceil((DURATION - elapsed) / 1000));
+                if (elapsed < DURATION) requestAnimationFrame(tick);
+                else window.location.replace('index.html#dashboard');
+            }
+            requestAnimationFrame(tick);
+        }
+
+        /* ── Show error ── */
+        function showError(msg) {
+            document.getElementById('st-error').innerHTML = `
+        <div class="icon-ring error" style="font-size:2rem">✕</div>
+        <h1 class="error-h fi">Verification Failed</h1>
+        <p class="sub fi" style="animation-delay:.1s">
+          ${msg || 'The link may have expired or already been used. Please ask your admin to resend access.'}
+        </p>
+        <a href="login.html" class="back-link fi" style="animation-delay:.2s">
+          ← <span>Back to login</span>
+        </a>
+      `;
+            document.getElementById('st-loading').style.display = 'none';
+            document.getElementById('st-error').style.display = 'block';
+        }
+
+        /* ── Main verification handler ── */
+        async function handleVerification() {
+            try {
+                /* Check for error in hash (Supabase sends error_description for expired links) */
+                const hashStr = window.location.hash.substring(1);
+                const hashParams = new URLSearchParams(hashStr);
+                const errorDesc = hashParams.get('error_description');
+                if (errorDesc) {
+                    showError(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+                    return;
+                }
+
+                /* Case 1: PKCE flow — Supabase sends ?code=xxx */
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+
+                /* Case 2: Implicit / hash flow — Supabase sends #access_token=xxx */
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+
+                let session = null;
+
+                if (code) {
+                    /* Exchange auth code for session (PKCE) */
+                    const { data, error } = await sb.auth.exchangeCodeForSession(code);
+                    if (error) throw error;
+                    session = data.session;
+                } else if (accessToken && refreshToken) {
+                    /* Set session from hash tokens */
+                    const { data, error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+                    if (error) throw error;
+                    session = data.session;
+                } else {
+                    /* Maybe already signed in */
+                    const { data: { session: existing } } = await sb.auth.getSession();
+                    if (existing) {
+                        session = existing;
+                    } else {
+                        showError('No verification token found. This link may have already been used.');
+                        return;
+                    }
+                }
+
+                if (!session) throw new Error('Could not establish session.');
+
+                const user = session.user;
+                const meta = user.user_metadata || {};
+                const name = meta.name || meta.full_name || '';
+                const role = (meta.role || 'employee').toLowerCase();
+
+                /* Save localStorage session (same format as login.html) */
+                localStorage.setItem('gm_session', JSON.stringify({
+                    name: name || user.email?.split('@')[0] || 'Employee',
+                    role,
+                    email: user.email,
+                    loginAt: new Date().toISOString()
+                }));
+
+                showSuccess(name, user.email);
+
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        handleVerification();
+    </script>
+</body>
+
+</html>

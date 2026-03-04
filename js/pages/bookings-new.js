@@ -100,6 +100,32 @@
                   <span style="color:var(--gold-bright);">Estimated Total</span>
                   <strong id="sum-total" style="color:var(--gold-bright);">—</strong>
                 </div>
+                <div class="bill-row" id="sum-advance-row" style="display:none;color:rgba(100,220,120,0.9);">
+                  <span>Advance Paid</span><strong id="sum-advance-amt" style="color:rgba(100,220,120,0.9);">—</strong>
+                </div>
+                <div class="bill-row" id="sum-due-row" style="display:none;border-top:1px dashed var(--border);margin-top:0.4rem;padding-top:0.4rem;">
+                  <span style="color:var(--gold-bright);">Remaining Due at Checkout</span>
+                  <strong id="sum-due-amt" style="color:var(--gold-bright);">—</strong>
+                </div>
+              </div>
+
+              <!-- Advance Payment Toggle -->
+              <div style="background:rgba(212,168,83,0.06);border:1px solid rgba(212,168,83,0.15);border-radius:9px;padding:0.7rem 0.9rem;margin-bottom:0.75rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:700;color:var(--gold-bright);">Advance Payment</div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-top:0.1rem;">Guest pays part now, rest at checkout</div>
+                  </div>
+                  <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                    <input type="checkbox" id="advanceToggle" style="opacity:0;width:0;height:0;">
+                    <span style="position:absolute;inset:0;background:rgba(255,255,255,0.12);border-radius:24px;cursor:pointer;transition:background 0.25s;" id="advance-track"></span>
+                    <span style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform 0.25s;pointer-events:none;" id="advance-thumb"></span>
+                  </label>
+                </div>
+                <div id="advance-amount-row" style="display:none;margin-top:0.65rem;">
+                  <label class="form-label" for="advanceAmount" style="font-size:0.72rem;">Advance Amount (₹)</label>
+                  <input class="form-input" type="number" id="advanceAmount" min="0" placeholder="e.g. 1000" style="margin-top:0.25rem;">
+                </div>
               </div>
 
               <div class="form-grid form-grid--2">
@@ -226,10 +252,46 @@
     document.getElementById('sum-gst-amount').textContent = GM.fmt.currency(gstAmount);
     document.getElementById('sum-total').textContent = GM.fmt.currency(total);
     summary.style.display = 'block';
+    updateAdvanceSummary(total);
+  }
+
+  function updateAdvanceSummary(total) {
+    const advToggle = document.getElementById('advanceToggle');
+    const advAmt = parseFloat(document.getElementById('advanceAmount')?.value) || 0;
+    const advRow = document.getElementById('sum-advance-row');
+    const dueRow = document.getElementById('sum-due-row');
+    if (advToggle?.checked && advAmt > 0) {
+      advRow.style.display = 'flex';
+      dueRow.style.display = 'flex';
+      document.getElementById('sum-advance-amt').textContent = '-' + GM.fmt.currency(advAmt);
+      document.getElementById('sum-due-amt').textContent = GM.fmt.currency(Math.max(0, total - advAmt));
+    } else {
+      advRow.style.display = 'none';
+      dueRow.style.display = 'none';
+    }
   }
   roomSelect.addEventListener('change', updateSummary);
   document.getElementById('checkInDate').addEventListener('change', updateSummary);
   document.getElementById('checkOutDate').addEventListener('change', updateSummary);
+
+  // Advance toggle wiring
+  const advanceToggle = document.getElementById('advanceToggle');
+  const advanceAmtRow = document.getElementById('advance-amount-row');
+  const advanceTrack = document.getElementById('advance-track');
+  const advanceThumb = document.getElementById('advance-thumb');
+  advanceToggle.addEventListener('change', () => {
+    const on = advanceToggle.checked;
+    advanceAmtRow.style.display = on ? 'block' : 'none';
+    advanceTrack.style.background = on ? 'var(--gold-bright)' : 'rgba(255,255,255,0.12)';
+    advanceThumb.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+    const total = parseFloat(document.getElementById('sum-total')?.textContent?.replace(/[^\d.]/g, '')) || 0;
+    updateAdvanceSummary(total);
+  });
+  document.getElementById('advanceAmount').addEventListener('input', () => {
+    const total = parseFloat(document.getElementById('sum-total')?.textContent?.replace(/[^\d.]/g, '')) || 0;
+    updateAdvanceSummary(total);
+  });
+
 
   // Set default & min dates — today for check-in, tomorrow for check-out
   const today = new Date().toISOString().split('T')[0];
@@ -277,6 +339,8 @@
       const adults = parseInt(document.getElementById('adults').value) || 1;
       const children = parseInt(document.getElementById('children').value) || 0;
       const special = document.getElementById('specialRequests')?.value?.trim() || '';
+      const advancePaid = document.getElementById('advanceToggle').checked
+        ? (parseFloat(document.getElementById('advanceAmount').value) || 0) : 0;
 
       try {
         // Find or create guest (match by Aadhaar first, then phone)
@@ -308,6 +372,8 @@
           specialRequests: special,
           rate: selectedRoom ? selectedRoom.rate : 0,
           nights,
+          advance_paid: advancePaid,
+          added_by: (JSON.parse(localStorage.getItem('gm_session') || '{}')).name || null,
         });
 
         GM.toast('🎉 Booking created successfully!', 'success');

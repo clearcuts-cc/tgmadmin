@@ -109,6 +109,7 @@ const MockData = (() => {
             status: b.status || 'confirmed',
             specialRequests: b.special_requests || '',
             rate: Number(b.rate) || 0, nights: b.nights || 1,
+            advance_paid: Number(b.advance_paid) || 0,
         };
     }
     function normalizeMenu(m) {
@@ -130,6 +131,8 @@ const MockData = (() => {
             date: e.date, time: e.time || '', type: e.type || 'general',
             price: Number(e.price) || 0, maxCapacity: Number(e.max_capacity) || 0,
             registrations: e.registrations || [],
+            services: e.services || [],
+            added_by: e.added_by || null,
         };
     }
     function normalizeHistory(h) {
@@ -366,6 +369,7 @@ const MockData = (() => {
                 specialRequests: bookingData.specialRequests || '',
                 rate: Number(bookingData.rate) || 0,
                 nights: Number(bookingData.nights) || 1,
+                advance_paid: Number(bookingData.advance_paid) || 0,
             };
 
             try {
@@ -376,6 +380,7 @@ const MockData = (() => {
                     adults: booking.adults, children: booking.children,
                     status: booking.status, special_requests: booking.specialRequests,
                     rate: booking.rate, nights: booking.nights,
+                    advance_paid: booking.advance_paid || 0,
                 });
 
                 if (error) {
@@ -515,6 +520,8 @@ const MockData = (() => {
                     date: e.date, time: e.time || '', type: e.type || 'general',
                     price: Number(e.price) || 0, max_capacity: Number(e.maxCapacity) || 0,
                     registrations: e.registrations || [],
+                    services: e.services || [],
+                    added_by: e.added_by || null,
                 };
             });
             try {
@@ -522,6 +529,16 @@ const MockData = (() => {
                 if (error) console.error('saveEvents error:', error);
             } catch (err) {
                 console.error('saveEvents exception:', err);
+            }
+        },
+
+        async deleteEvent(id) {
+            _cache.events = _cache.events.filter(e => e.id !== id);
+            try {
+                const { error } = await db().from('events').delete().eq('id', id);
+                if (error) console.error('deleteEvent error:', error);
+            } catch (err) {
+                console.error('deleteEvent exception:', err);
             }
         },
 
@@ -611,6 +628,25 @@ const MockData = (() => {
                 if (e2) {
                     console.error('startStay payment error:', e2);
                     GM.toast('Warning: Room payment not recorded in cloud', 'warning');
+                }
+
+                // Record advance payment as a negative deduction if booking had advance
+                const advancePaid = Number(booking.advance_paid) || 0;
+                if (advancePaid > 0) {
+                    const advDbId = crypto.randomUUID();
+                    const advPayment = {
+                        _dbId: advDbId, type: 'advance',
+                        description: `Advance paid at booking`,
+                        amount: -advancePaid,   // negative = deduction
+                        paidAt: new Date().toISOString(),
+                        method: 'Advance', ref: 'Paid at booking',
+                    };
+                    stay.payments.push(advPayment);
+                    await db().from('stay_payments').insert({
+                        id: advDbId, stay_id: dbId, booking_id: booking.id,
+                        type: 'advance', description: advPayment.description,
+                        amount: -advancePaid, method: 'Advance', ref: 'Paid at booking',
+                    });
                 }
 
                 _cache.activeStays[booking.id] = stay;

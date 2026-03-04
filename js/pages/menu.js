@@ -103,8 +103,8 @@
               <span class="toggle-slider"></span>
             </label>
             <div class="menu-item__actions">
-              <button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMMenuEdit('${item.id}')">✏</button>
-              <button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMMenuDelete('${item.id}')">🗑</button>
+              ${window.GMCan?.edit() !== false ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMMenuEdit('${item.id}')">✏</button>` : ''}
+              ${window.GMCan?.delete() !== false ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMMenuDelete('${item.id}')">🗑</button>` : ''}
             </div>
           </div>`).join('')}
         </div>`;
@@ -174,8 +174,10 @@
           id: crypto.randomUUID(), name, price,
           description: document.getElementById('item-desc').value.trim(),
           category: document.getElementById('item-category').value,
-          available: document.getElementById('item-available').checked
+          available: document.getElementById('item-available').checked,
+          added_by: (JSON.parse(localStorage.getItem('gm_session') || '{}')).name || null,
         });
+        GM.toast('Menu item added!', 'success');
       }
       await MockData.saveMenu(items);
       GM.btnLoading(modalSave, false);

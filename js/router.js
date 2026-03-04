@@ -10,6 +10,15 @@
     if (!sessionRaw) { window.location.replace('login.html'); return; }
     const session = JSON.parse(sessionRaw);
 
+    /* Expose role globally so all page modules + nav can read it */
+    window.GMRole = (session.role || 'admin').toLowerCase();
+
+    /* Permission helpers — employees can only add, not edit/delete */
+    window.GMCan = {
+        edit: () => window.GMRole !== 'employee',
+        delete: () => window.GMRole !== 'employee',
+    };
+
     /* ── POPULATE HEADER ───────────────────────────────────── */
     const nameEl = document.getElementById('header-name');
     const roleEl = document.getElementById('header-role');
@@ -130,7 +139,11 @@
         'history': 'js/pages/history.js',
         'export': 'js/pages/export.js',
         'settings': 'js/pages/settings.js',
+        'employees': 'js/pages/employees.js',
     };
+
+    /* Admin-only pages: redirect employees to dashboard */
+    const ADMIN_ONLY_PAGES = new Set(['settings', 'employees']);
 
     /* ── CURRENT SCRIPT TRACKER ─────────────────────────────── */
     let currentPageScript = null;
@@ -151,6 +164,12 @@
 
     function navigate() {
         const { page, params } = parseHash();
+
+        /* Redirect employees away from admin-only pages */
+        if (window.GMRole === 'employee' && ADMIN_ONLY_PAGES.has(page)) {
+            window.location.hash = '#dashboard';
+            return;
+        }
 
         // Highlight active nav link
         if (window.GMNav) GMNav.highlightNav(page);

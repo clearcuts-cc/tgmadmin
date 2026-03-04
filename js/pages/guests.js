@@ -100,7 +100,10 @@
       tbody.innerHTML = filtered.map(g => `
       <tr>
         <td style="font-size:0.78rem;color:var(--text-muted);">${g.id}</td>
-        <td style="font-weight:500;">${g.name}</td>
+        <td style="font-weight:500;">
+          ${g.name}
+          ${g.added_by ? `<br><span style="font-size:0.68rem;color:rgba(255,255,255,0.3);">Added by ${g.added_by}</span>` : ''}
+        </td>
         <td>${g.phone}</td>
         <td>${g.lastStay ? GM.fmt.date(g.lastStay) : '—'}</td>
         <td>
@@ -109,8 +112,8 @@
         </td>
         <td style="display:flex;gap:0.4rem;">
           <button onclick="window.__gmViewGuest('${g.id}')" class="btn btn--sm btn--ghost">View →</button>
-          <button onclick="window.__gmEditGuest('${g.id}')" class="btn btn--sm btn--ghost btn--icon" title="Edit">✏</button>
-          <button onclick="window.__gmDeleteGuest('${g.id}')" class="btn btn--sm btn--danger btn--icon" title="Delete">🗑</button>
+          ${window.GMCan?.edit() !== false ? `<button onclick="window.__gmEditGuest('${g.id}')" class="btn btn--sm btn--ghost btn--icon" title="Edit">✏</button>` : ''}
+          ${window.GMCan?.delete() !== false ? `<button onclick="window.__gmDeleteGuest('${g.id}')" class="btn btn--sm btn--danger btn--icon" title="Delete">🗑</button>` : ''}
         </td>
       </tr>`).join('');
     }
@@ -160,6 +163,7 @@
       GM.btnLoading(btn, true);
       setTimeout(() => {
         GM.btnLoading(btn, false);
+        const session = JSON.parse(localStorage.getItem('gm_session') || '{}');
         if (editingGuestId) {
           MockData.updateGuest(editingGuestId, {
             name, phone,
@@ -176,6 +180,7 @@
             aadhaar: document.getElementById('g-aadhaar').value.trim(),
             totalStays: 0,
             lastStay: null,
+            added_by: session.name || null,
           });
           GM.toast('Guest added!', 'success');
         }

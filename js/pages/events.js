@@ -26,7 +26,7 @@
 
     <!-- Create/Edit Modal -->
     <div class="modal-overlay" id="event-modal">
-      <div class="modal">
+      <div class="modal" style="max-width:540px;">
         <div class="modal__header">
           <h2 class="modal__title" id="event-modal-title">Create Event</h2>
           <button class="modal__close" id="event-modal-close">✕</button>
@@ -59,6 +59,24 @@
                 <input class="form-input" type="number" id="ev-capacity" min="1" placeholder="e.g. 20" required>
               </div>
             </div>
+
+            <!-- SERVICES / EXTRA CHARGES -->
+            <div style="margin-top:1rem;border-top:1px solid rgba(255,255,255,0.08);padding-top:1rem;">
+              <div style="font-size:0.78rem;font-weight:700;color:var(--gold-bright);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Services / Extra Charges</div>
+              <div style="display:flex;gap:0.5rem;align-items:flex-end;">
+                <div class="form-group" style="flex:1;margin:0;">
+                  <label class="form-label" for="ev-svc-name" style="font-size:0.72rem;">Service Name</label>
+                  <input class="form-input" type="text" id="ev-svc-name" placeholder="e.g. Chair, DJ, Bonfire">
+                </div>
+                <div class="form-group" style="width:110px;margin:0;">
+                  <label class="form-label" for="ev-svc-amt" style="font-size:0.72rem;">Amount (₹)</label>
+                  <input class="form-input" type="number" id="ev-svc-amt" min="0" placeholder="0">
+                </div>
+                <button type="button" class="btn btn--primary" id="ev-svc-add" style="white-space:nowrap;flex-shrink:0;">＋ Add</button>
+              </div>
+              <div id="ev-svc-list" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;"></div>
+            </div>
+
           </form>
         </div>
         <div class="modal__footer">
@@ -70,11 +88,38 @@
   `;
 
     let editingEventId = null;
+    let modalServices = []; // [{name, amount}]
     const evGrid = document.getElementById('events-grid');
     const emptyState = document.getElementById('events-empty');
     const modal = document.getElementById('event-modal');
     const modalTitle = document.getElementById('event-modal-title');
     const modalSave = document.getElementById('event-modal-save');
+
+    function renderModalServices() {
+      const list = document.getElementById('ev-svc-list');
+      if (!list) return;
+      if (!modalServices.length) { list.innerHTML = ''; return; }
+      list.innerHTML = modalServices.map((s, i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(212,168,83,0.07);border:1px solid rgba(212,168,83,0.15);border-radius:7px;padding:0.35rem 0.6rem;font-size:0.82rem;">
+          <span style="font-weight:500;">${s.name}</span>
+          <span style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="color:var(--gold-bright);font-weight:600;">₹${s.amount}</span>
+            <button type="button" onclick="GMEvSvcRemove(${i})" style="background:none;border:none;cursor:pointer;color:rgba(255,80,80,0.7);font-size:1rem;line-height:1;">✕</button>
+          </span>
+        </div>`).join('');
+    }
+    window.GMEvSvcRemove = (i) => { modalServices.splice(i, 1); renderModalServices(); };
+
+    document.getElementById('ev-svc-add').addEventListener('click', () => {
+      const name = document.getElementById('ev-svc-name').value.trim();
+      const amount = parseFloat(document.getElementById('ev-svc-amt').value) || 0;
+      if (!name) { GM.toast('Enter a service name.', 'error'); return; }
+      if (amount <= 0) { GM.toast('Enter a valid amount.', 'error'); return; }
+      modalServices.push({ name, amount });
+      document.getElementById('ev-svc-name').value = '';
+      document.getElementById('ev-svc-amt').value = '';
+      renderModalServices();
+    });
 
     function totalRegistered(ev) { return (ev.registrations || []).reduce((s, r) => s + r.numGuests, 0); }
 
@@ -91,6 +136,8 @@
           <div class="event-card__date">${dateStr}</div>
           <div class="event-card__name">${ev.name}</div>
           <div class="event-card__meta">${ev.description || ''}</div>
+          ${ev.added_by ? `<div style="font-size:0.68rem;color:rgba(255,255,255,0.3);margin-top:0.25rem;">Added by ${ev.added_by}</div>` : ''}
+          ${(ev.services && ev.services.length) ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;">${ev.services.map(s => `<span style="font-size:0.7rem;background:rgba(212,168,83,0.12);color:var(--gold-bright);border-radius:5px;padding:0.15rem 0.45rem;border:1px solid rgba(212,168,83,0.2);">${s.name} ₹${s.amount}</span>`).join('')}</div>` : ''}
           ${GM.capacityBar(used, ev.maxCapacity)}
           <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.6rem;flex-wrap:wrap;">
             <span class="badge badge--blue">₹${ev.price}/person</span>
@@ -98,8 +145,8 @@
           </div>
           <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
             <button onclick="window.__gmViewEvent('${ev.id}')" class="btn btn--sm btn--ghost">View Details →</button>
-            <button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>
-            <button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>
+            ${window.GMCan?.edit() !== false ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>` : ''}
+            ${window.GMCan?.delete() !== false ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -107,9 +154,11 @@
 
     window.GMEvDelete = (id) => {
       GM.confirm('Delete Event', 'Permanently remove this event?', () => {
-        saveEvents(getEvents().filter(e => e.id !== id));
-        renderCards();
-        GM.toast('Event removed.', 'info');
+        (async () => {
+          await MockData.deleteEvent(id);
+          renderCards();
+          GM.toast('Event removed.', 'info');
+        })();
       });
     };
 
@@ -124,6 +173,8 @@
       document.getElementById('ev-time').value = ev.time;
       document.getElementById('ev-price').value = ev.price;
       document.getElementById('ev-capacity').value = ev.maxCapacity;
+      modalServices = ev.services ? [...ev.services] : [];
+      renderModalServices();
       modal.classList.add('open');
     };
 
@@ -131,6 +182,8 @@
       editingEventId = null;
       modalTitle.textContent = 'Create Event';
       document.getElementById('event-form').reset();
+      modalServices = [];
+      renderModalServices();
       modal.classList.add('open');
     });
 
@@ -153,10 +206,19 @@
         const events = getEvents();
         if (editingEventId) {
           const idx = events.findIndex(e => e.id === editingEventId);
-          events[idx] = { ...events[idx], name, description: document.getElementById('ev-desc').value.trim(), date, time, price, maxCapacity: capacity };
+          events[idx] = { ...events[idx], name, description: document.getElementById('ev-desc').value.trim(), date, time, price, maxCapacity: capacity, services: [...modalServices] };
           GM.toast('Event updated.', 'success');
         } else {
-          events.push({ id: crypto.randomUUID(), name, description: document.getElementById('ev-desc').value.trim(), date, time, price, maxCapacity: capacity, registrations: [] });
+          const session = JSON.parse(localStorage.getItem('gm_session') || '{}');
+          events.push({
+            id: crypto.randomUUID(),
+            name,
+            description: document.getElementById('ev-desc').value.trim(),
+            date, time, price, maxCapacity: capacity,
+            registrations: [],
+            services: [...modalServices],
+            added_by: session.name || null
+          });
           GM.toast('Event created!', 'success');
         }
         await MockData.saveEvents(events);
@@ -225,6 +287,13 @@
                 <span class="detail-row__label">Capacity</span>
                 <div>${GM.capacityBar(registrations.reduce((s, r) => s + r.numGuests, 0), event.maxCapacity)}</div>
               </div>
+              ${(event.services && event.services.length) ? `
+              <div class="detail-row">
+                <span class="detail-row__label">Services</span>
+                <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
+                  ${event.services.map(s => `<span style="font-size:0.75rem;background:rgba(212,168,83,0.1);color:var(--gold-bright);border-radius:6px;padding:0.2rem 0.5rem;border:1px solid rgba(212,168,83,0.2);">${s.name} — ₹${s.amount}</span>`).join('')}
+                </div>
+              </div>` : ''}
             </div>
           </div>
 
@@ -259,7 +328,6 @@
             </div>
             <div id="reg-revenue-preview" style="font-size:0.85rem;color:var(--gold-bright);margin-bottom:0.75rem;"></div>
             <button class="btn btn--primary btn--full" id="add-reg-btn">Add Registration</button>
-          </div>
         </div>
 
       </div>
@@ -276,13 +344,21 @@
         listEl.innerHTML = `<div class="empty-state" style="padding:1rem 0;"><span>🎉</span>No registrations yet.</div>`;
         return;
       }
-      listEl.innerHTML = registrations.map((r, i) => `
+      listEl.innerHTML = registrations.map((r, i) => {
+        const servicesTotal = (event.services || []).reduce((s, svc) => s + svc.amount, 0);
+        const rowTotal = r.numGuests * (event.price + servicesTotal);
+        const serviceNames = (event.services || []).map(s => s.name).join(', ');
+        return `
       <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
         <div style="width:32px;height:32px;background:var(--blue-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:0.85rem;font-weight:600;flex-shrink:0;">${r.numGuests}</div>
-        <div style="flex:1;font-size:0.9rem;font-weight:500;">${r.guestName}</div>
-        <div style="font-size:0.82rem;color:var(--gold-bright);">${GM.fmt.currency(r.numGuests * event.price)}</div>
+        <div style="flex:1;">
+          <div style="font-size:0.9rem;font-weight:500;">${r.guestName}</div>
+          ${serviceNames ? `<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);">${serviceNames}</div>` : ''}
+        </div>
+        <div style="font-size:0.82rem;color:var(--gold-bright);font-weight:600;">${GM.fmt.currency(rowTotal)}</div>
         <button class="btn btn--sm btn--danger btn--icon" onclick="GMEvRegRemove(${i})">✕</button>
-      </div>`).join('');
+      </div>`;
+      }).join('');
     }
     renderRegs();
 
@@ -296,9 +372,19 @@
     };
 
     const numInput = document.getElementById('reg-num');
+    const servicesPerPerson = (event.services || []).reduce((s, svc) => s + svc.amount, 0);
+    const totalPerPerson = event.price + servicesPerPerson;
     function updatePreview() {
       const n = parseInt(numInput.value) || 0;
-      document.getElementById('reg-revenue-preview').textContent = n > 0 ? `Revenue: ${GM.fmt.currency(n * event.price)}` : '';
+      const preview = document.getElementById('reg-revenue-preview');
+      if (n > 0) {
+        let lines = `₹${event.price} × ${n} guest${n > 1 ? 's' : ''}`;
+        if (servicesPerPerson > 0) lines += ` + ₹${servicesPerPerson} services`;
+        lines += ` = ${GM.fmt.currency(n * totalPerPerson)}`;
+        preview.textContent = lines;
+      } else {
+        preview.textContent = '';
+      }
     }
     numInput.addEventListener('input', updatePreview);
     updatePreview();
@@ -321,10 +407,9 @@
         registrations.push({ guestName: name, numGuests: num });
         persistRegistrations();
 
-        // BILLING INTEGRATION:
-        // Try to find if this guest has an active stay to add to their bill
         const bookingId = MockData.findActiveBookingByGuestName(name);
         if (bookingId) {
+          // Bill base event price
           await MockData.addPaymentToStay(bookingId, {
             type: 'event',
             description: `Event: ${event.name} (${num} guest${num > 1 ? 's' : ''})`,
@@ -332,7 +417,17 @@
             method: 'Room Charge',
             ref: 'Event Reg'
           });
-          GM.toast(`Event charge added to Room Bill for ${name}`, 'info');
+          // Bill each pre-defined service
+          for (const svc of (event.services || [])) {
+            await MockData.addPaymentToStay(bookingId, {
+              type: 'event',
+              description: `${svc.name} — ${event.name}`,
+              amount: svc.amount,
+              method: 'Room Charge',
+              ref: 'Event Service'
+            });
+          }
+          GM.toast(`Event + services billed to ${name}'s room`, 'info');
         }
 
         renderRegs();
@@ -343,6 +438,7 @@
         GM.btnLoading(btn, false);
       })();
     });
+
 
     const dGrid = document.getElementById('event-detail-grid');
     function handleResize() {
