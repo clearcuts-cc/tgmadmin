@@ -55,8 +55,6 @@ window.RoomCache = (function () {
     }
 
     async function updateRoom(id, updatedObj) {
-        const index = _rooms.findIndex(r => r.id === id);
-        if (index !== -1) _rooms[index] = { ..._rooms[index], ...updatedObj };
         try {
             const dbUpdates = { ...updatedObj };
             if (dbUpdates.base_price_per_night !== undefined) dbUpdates.base_price_per_night = Number(dbUpdates.base_price_per_night);
@@ -64,10 +62,17 @@ window.RoomCache = (function () {
 
             const { error } = await db().from('rooms').update(dbUpdates).eq('id', id);
             if (error) throw error;
+
+            // Only update local cache if DB update succeeds
+            const index = _rooms.findIndex(r => r.id === id);
+            if (index !== -1) _rooms[index] = { ..._rooms[index], ...updatedObj };
+
             GM.toast(`Room ${updatedObj.room_number || 'details'} updated in cloud`, 'success');
+            return true;
         } catch (e) {
             console.error('Failed to update room in Supabase:', e);
             GM.toast('Failed to update room in cloud', 'error');
+            throw e; // Re-throw so caller can handle
         }
     }
 

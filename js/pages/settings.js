@@ -572,28 +572,38 @@
         return;
       }
 
-      const roomObj = {
+      const roomData = {
         room_number: num,
         room_type: type,
         floor: floor,
         capacity: cap,
         base_price_per_night: price,
-        description: desc,
-        status: 'available'
+        description: desc
       };
 
-      if (id) {
-        await window.RoomCache.updateRoom(id, roomObj);
-        GM.toast('Room updated successfully', 'success');
-      } else {
-        roomObj.id = crypto.randomUUID();
-        roomObj.created_at = new Date().toISOString();
-        await window.RoomCache.addRoom(roomObj);
-        GM.toast('Room added successfully', 'success');
-      }
+      try {
+        if (id) {
+          // UPDATE: Get existing room to preserve its current status
+          const existing = await window.RoomCache.getRoomById(id);
+          const roomObj = { ...roomData, status: existing ? existing.status : 'available' };
 
-      document.getElementById('room-form-container').classList.remove('active');
-      renderRoomsList();
+          await window.RoomCache.updateRoom(id, roomObj);
+          GM.toast('Room updated successfully', 'success');
+        } else {
+          // ADD NEW
+          const roomObj = { ...roomData, status: 'available' };
+          roomObj.id = crypto.randomUUID();
+          roomObj.created_at = new Date().toISOString();
+          await window.RoomCache.addRoom(roomObj);
+          GM.toast('Room added successfully', 'success');
+        }
+
+        document.getElementById('room-form-container').classList.remove('active');
+        renderRoomsList();
+      } catch (err) {
+        // Error already toasted by RoomCache, but we catch here to prevent clearing form
+        console.error('Room save failed:', err);
+      }
     });
 
     document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
