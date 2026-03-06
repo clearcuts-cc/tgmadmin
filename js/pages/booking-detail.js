@@ -87,9 +87,19 @@
             <h3 style="margin-bottom:1rem;">⚡ Actions</h3>
             <div style="display:flex;flex-direction:column;gap:0.5rem;">
               ${booking.status === 'confirmed' ? `<button class="btn btn--teal btn--full" id="confirm-checkin-btn">✔ Confirm Check-in</button>` : ''}
+              ${booking.status === 'confirmed' ? `<button class="btn btn--danger btn--full" id="cancel-booking-btn">✕ Cancel Booking</button>` : ''}
               ${booking.status === 'checked_in' || booking.status === 'due_checkout'
       ? `<a href="#checkout?booking=${booking.id}" class="btn btn--secondary btn--full">↩ Process Check-out</a>` : ''}
               ${booking.status === 'checked_out' ? `<div class="badge badge--gray" style="justify-content:center;padding:0.5rem;">Stay Completed</div>` : ''}
+              ${booking.status === 'cancelled' ? `
+                <div class="card card--ghost" style="padding:1rem;background:rgba(255,255,255,0.03);">
+                  <div class="badge badge--gray" style="justify-content:center;padding:0.5rem;width:100%;margin-bottom:0.5rem;">Booking Cancelled</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">
+                    <strong>Cancelled on:</strong> ${GM.fmt.date(booking.cancelledAt)}<br>
+                    <strong>Reason:</strong> ${booking.cancelledReason || 'No reason provided'}
+                  </div>
+                </div>
+              ` : ''}
               <a href="#orders?booking=${booking.id}" class="btn btn--ghost btn--full">🧾 View Food Orders</a>
               <a href="#guest-profile?guest=${booking.guestId}" class="btn btn--ghost btn--full">👤 View Guest Profile</a>
             </div>
@@ -126,6 +136,27 @@
           }, 1000);
         },
         'Check In Now', false);
+    });
+  }
+
+  // Cancel Booking
+  const cancelBtn = document.getElementById('cancel-booking-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      GM.confirm('Cancel Booking',
+        `Are you sure you want to cancel this booking for <strong>${booking.guestName}</strong> — Room ${booking.roomNumber}?<br><br>Check-in: ${GM.fmt.date(booking.checkIn)} | Check-out: ${GM.fmt.date(booking.checkOut)}<br><br><span style="color:var(--text-muted);font-size:0.85rem;">This action cannot be undone. You will be asked for a reason next.</span>`,
+        () => {
+          // Now ask for reason using custom prompt
+          GM.prompt('Cancellation Reason', 'Please provide a reason for cancellation (optional):', (reason) => {
+            GM.btnLoading(cancelBtn, true);
+            setTimeout(async () => {
+              await MockData.cancelBooking(booking.id, reason);
+              // Refresh page content
+              GMRouteParam('booking') && window.location.reload();
+            }, 800);
+          }, 'No reason provided', 'Confirm Cancellation');
+        },
+        'Yes, Cancel Booking', true);
     });
   }
 })();

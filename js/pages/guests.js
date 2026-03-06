@@ -11,7 +11,7 @@
           <h1>Guest Directory</h1>
           <p>All registered guests — search by name, phone, or Aadhaar</p>
         </div>
-        <button class="btn btn--primary" id="add-guest-btn">+ Add Guest</button>
+        ${window.GMIsAdmin ? `<button class="btn btn--primary" id="add-guest-btn">+ Add Guest</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -112,8 +112,8 @@
         </td>
         <td style="display:flex;gap:0.4rem;">
           <button onclick="window.__gmViewGuest('${g.id}')" class="btn btn--sm btn--ghost">View →</button>
-          ${window.GMCan?.edit() !== false ? `<button onclick="window.__gmEditGuest('${g.id}')" class="btn btn--sm btn--ghost btn--icon" title="Edit">✏</button>` : ''}
-          ${window.GMCan?.delete() !== false ? `<button onclick="window.__gmDeleteGuest('${g.id}')" class="btn btn--sm btn--danger btn--icon" title="Delete">🗑</button>` : ''}
+          ${window.GMIsAdmin ? `<button onclick="window.__gmEditGuest('${g.id}')" class="btn btn--sm btn--ghost btn--icon" title="Edit">✏</button>` : ''}
+          ${window.GMIsAdmin ? `<button onclick="window.__gmDeleteGuest('${g.id}')" class="btn btn--sm btn--danger btn--icon" title="Delete">🗑</button>` : ''}
         </td>
       </tr>`).join('');
     }
@@ -128,11 +128,14 @@
     document.getElementById('guest-modal-cancel').addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    document.getElementById('add-guest-btn').addEventListener('click', () => {
-      editingGuestId = null;
-      document.getElementById('guest-form').reset();
-      openModal('Add Guest');
-    });
+    const addGuestBtn = document.getElementById('add-guest-btn');
+    if (addGuestBtn) {
+      addGuestBtn.addEventListener('click', () => {
+        editingGuestId = null;
+        document.getElementById('guest-form').reset();
+        openModal('Add Guest');
+      });
+    }
 
     window.__gmEditGuest = (id) => {
       const g = MockData.getGuestById(id);
@@ -280,9 +283,11 @@
                           <td>
                             ${st.status === 'active'
             ? `<span class="badge badge--success" style="font-size:0.65rem;">Currently In</span>`
-            : `<span class="badge" style="font-size:0.65rem;background:rgba(255,255,255,0.05);">Completed</span>`}
+            : st.status === 'cancelled'
+              ? `<span class="badge badge--gray" style="font-size:0.65rem;" title="Reason: ${st.cancelledReason || 'None'}">Cancelled</span>`
+              : `<span class="badge" style="font-size:0.65rem;background:rgba(255,255,255,0.05);">Completed</span>`}
                           </td>
-                          <td style="color:var(--gold-bright);font-weight:500;">${GM.fmt.currency(st.total)}</td>
+                          <td style="color:var(--gold-bright);font-weight:500;">${st.status === 'cancelled' ? '—' : GM.fmt.currency(st.total)}</td>
                         </tr>`).join('')}
                     </tbody>
                   </table>

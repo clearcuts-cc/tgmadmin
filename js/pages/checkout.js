@@ -115,16 +115,28 @@
       payments = stay.payments;
     } else {
       // No stay recorded (e.g. booking was checked-in without using the check-in flow)
-      payments = [{ type: 'room', description: `Room charges — ${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(rate)}`, amount: nights * rate, paidAt: booking.checkIn || new Date().toISOString(), method: 'Cash', ref: '' }];
+      payments = [
+        { type: 'room', description: `Room charges — ${nights} nights × ${GM.fmt.currency(rate)}`, amount: nights * rate, paidAt: booking.checkIn || new Date().toISOString(), method: 'Cash', ref: '' }
+      ];
     }
 
+    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const roomSubtotal = nights * rate;
+    const roomGstAmt = Math.round(roomSubtotal * (roomGST / 100));
+    const roomChargeTotal = roomSubtotal + roomGstAmt;
+
+    // Distinguish payments
     const roomPays = payments.filter(p => p.type === 'room');
+    const roomPaymentsTotal = roomPays.reduce((s, p) => s + p.amount, 0);
+
     const foodPays = payments.filter(p => p.type === 'food');
     const eventPays = payments.filter(p => p.type === 'event');
     const advancePays = payments.filter(p => p.type === 'advance');
-    const advanceTotal = advancePays.reduce((s, p) => s + p.amount, 0); // negative sum
-    const grandTotal = payments.filter(p => p.type !== 'advance').reduce((s, p) => s + p.amount, 0);
-    const netTotal = grandTotal + advanceTotal; // advance is negative so this reduces total
+    const advanceTotal = Math.abs(advancePays.reduce((s, p) => s + p.amount, 0));
+
+    // Total of service payments (food, events, extras) which are already settled
+    const servicePays = payments.filter(p => ['food', 'event', 'extra'].includes(p.type));
+    const servicesTotal = servicePays.reduce((s, p) => s + p.amount, 0);
 
     function fmtPaidAt(iso) {
       try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
@@ -223,7 +235,23 @@
 
               <!-- Room Charges -->
               <div class="bill-section-header">🏠 &nbsp;Room Charges</div>
-              ${roomPays.length ? roomPays.map(lineRow).join('') : emptySection()}
+              <div class="bill-line-row">
+                <div class="bill-line-left">
+                  <div class="bill-line-title">Room Rent — ${nights} nights × ${GM.fmt.currency(rate)}</div>
+                  <div class="bill-line-meta">${GM.fmt.date(booking.checkIn)} to ${GM.fmt.date(booking.checkOut)}</div>
+                </div>
+                <div class="bill-line-right">
+                  <span class="bill-amount">${GM.fmt.currency(roomSubtotal)}</span>
+                </div>
+              </div>
+              <div class="bill-line-row" style="border-top:none;padding-top:0;">
+                <div class="bill-line-left">
+                  <div class="bill-line-title">GST (${roomGST}%)</div>
+                </div>
+                <div class="bill-line-right">
+                  <span class="bill-amount">${GM.fmt.currency(roomGstAmt)}</span>
+                </div>
+              </div>
 
               <!-- Food Orders -->
               <div class="bill-section-header">🍽 &nbsp;Food Orders</div>
@@ -289,30 +317,34 @@
               <!-- Totals -->
               <div class="bill-total-section">
                 <div class="bill-total-row">
-                  <span>Total Collected (incl. GST)</span>
-                  <span>${GM.fmt.currency(grandTotal)}</span>
+                  <span>Gross Total (Charges + Paid Services)</span>
+                  <span id="gross-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</span>
                 </div>
-                ${advanceTotal < 0 ? `
+                <div class="bill-total-row" style="color:var(--text-muted);font-size:0.85rem;">
+                  <span>Paid Services (Food/Events/Extra)</span>
+                  <span>-${GM.fmt.currency(servicesTotal)}</span>
+                </div>
+                ${advanceTotal > 0 ? `
                 <div class="bill-total-row" style="color:rgba(100,220,120,0.9);">
-                  <span>Advance Paid</span>
-                  <span>-${GM.fmt.currency(Math.abs(advanceTotal))}</span>
-                </div>
-                <div class="bill-total-row" style="opacity:0.6;font-size:0.85rem;">
-                  <span>Net Remaining</span>
-                  <span>${GM.fmt.currency(netTotal)}</span>
+                  <span>Advance Payment (Room)</span>
+                  <span>-${GM.fmt.currency(advanceTotal)}</span>
                 </div>` : ''}
+                <div class="bill-total-row" style="border-top:1px dashed rgba(255,255,255,0.1);padding-top:0.5rem;margin-top:0.5rem;">
+                  <span style="font-weight:600;">Net Room Balance</span>
+                  <span style="font-weight:600;">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal))}</span>
+                </div>
                 <div class="bill-grand-total">
-                  <span>Grand Total</span>
-                  <span id="grand-total-display">${GM.fmt.currency(netTotal)}</span>
+                  <span>Final Amount to Pay</span>
+                  <span id="grand-total-display">${GM.fmt.currency(roomChargeTotal - advanceTotal)}</span>
                 </div>
                 <div class="bill-adjustment-row" style="padding:0.75rem 0;border-top:1px dashed rgba(255,255,255,0.1);">
-                  <span style="font-size:1rem;font-weight:500;color:rgba(100,220,120,0.9);">💵 Amount Paid Now</span>
+                  <span style="font-size:1rem;font-weight:500;color:rgba(100,220,120,0.9);">💵 Pay Balanced Due</span>
                   <div>
                     <input type="number" id="paid-now" value="0" min="0" placeholder="0" class="form-input" style="width:130px;text-align:right;">
                   </div>
                 </div>
                 <div class="bill-balance" id="balance-row">
-                  <span>Balance Due</span>
+                  <span>Remaining Due</span>
                   <span id="balance-due-display">₹0</span>
                 </div>
               </div>
@@ -423,11 +455,15 @@
       const disc = parseFloat(discountInput.value) || 0;
       if (discValEl) discValEl.textContent = disc;
       const totalExtra = addedCharges.reduce((s, c) => s + c.amount, 0);
-      const totalDue = addedCharges.filter(c => !c.isPaid).reduce((s, c) => s + c.amount, 0);
+      const totalExtraDue = addedCharges.filter(c => !c.isPaid).reduce((s, c) => s + c.amount, 0);
       const paidNow = parseFloat(document.getElementById('paid-now')?.value) || 0;
-      const adj = totalExtra - disc;
-      const balance = Math.max(0, netTotal + totalDue - disc - paidNow);
-      grandDisplay.textContent = GM.fmt.currency(netTotal + adj);
+
+      // Balance = (Room Charge - Already Paid Room/Advance) + Any extra dues - discount
+      const roomBal = Math.max(0, roomChargeTotal - roomPaymentsTotal - advanceTotal);
+      const currentNetTotal = roomBal + totalExtraDue - disc;
+      const balance = Math.max(0, currentNetTotal - paidNow);
+
+      grandDisplay.textContent = GM.fmt.currency(currentNetTotal);
       balanceEl.textContent = GM.fmt.currency(balance);
       balanceRow.className = 'bill-balance' + (balance > 0 ? ' bill-balance--due' : '');
       const hiddenEc = document.getElementById('extra-charges');
@@ -459,7 +495,7 @@
       const totalExtra = addedCharges.reduce((s, c) => s + c.amount, 0);
 
       GM.confirm('Confirm Check-out',
-        `Finalise check-out for ${booking.guestName}? Total: ${GM.fmt.currency(grandTotal + totalExtra - disc)} · Balance Payable: ${GM.fmt.currency(balance)}`,
+        `Finalise check-out for ${booking.guestName}? Room Balance: ${GM.fmt.currency(roomChargeTotal - advanceTotal + totalExtra - disc)} · Balance Payable Now: ${GM.fmt.currency(balance)}`,
         async () => {
           const coBtn = document.getElementById('confirm-checkout-btn');
           GM.btnLoading(coBtn, true);

@@ -16,7 +16,7 @@
           <h1>Events</h1>
           <p>Plan and manage resort activities and experiences</p>
         </div>
-        <button class="btn btn--primary" id="create-event-btn">＋ Create Event</button>
+        ${window.GMIsAdmin ? `<button class="btn btn--primary" id="create-event-btn">＋ Create Event</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -145,8 +145,8 @@
           </div>
           <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
             <button onclick="window.__gmViewEvent('${ev.id}')" class="btn btn--sm btn--ghost">View Details →</button>
-            ${window.GMCan?.edit() !== false ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>` : ''}
-            ${window.GMCan?.delete() !== false ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>` : ''}
+            ${window.GMIsAdmin ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>` : ''}
+            ${window.GMIsAdmin ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -178,14 +178,17 @@
       modal.classList.add('open');
     };
 
-    document.getElementById('create-event-btn').addEventListener('click', () => {
-      editingEventId = null;
-      modalTitle.textContent = 'Create Event';
-      document.getElementById('event-form').reset();
-      modalServices = [];
-      renderModalServices();
-      modal.classList.add('open');
-    });
+    const createEventBtn = document.getElementById('create-event-btn');
+    if (createEventBtn) {
+      createEventBtn.addEventListener('click', () => {
+        editingEventId = null;
+        modalTitle.textContent = 'Create Event';
+        document.getElementById('event-form').reset();
+        modalServices = [];
+        renderModalServices();
+        modal.classList.add('open');
+      });
+    }
 
     function closeModal() { modal.classList.remove('open'); }
     document.getElementById('event-modal-close').addEventListener('click', closeModal);

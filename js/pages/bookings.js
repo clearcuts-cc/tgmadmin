@@ -85,8 +85,9 @@
         : b.status === 'confirmed'
           ? `#checkin?booking=${b.id}`
           : `#booking-detail?booking=${b.id}`;
+      const isCancelled = b.status === 'cancelled';
       return `
-        <tr>
+        <tr style="${isCancelled ? 'opacity:0.4; pointer-events: none;' : ''}">
           <td style="font-size:0.78rem;color:var(--text-muted);">${b.id}</td>
           <td style="font-weight:500;">${b.guestName}</td>
           <td>Room ${b.roomNumber}</td>
@@ -94,7 +95,7 @@
           <td>${GM.fmt.date(b.checkOut)}</td>
           <td>${nights}</td>
           <td>${GM.statusBadge(b.status)}</td>
-          <td><a href="${viewLink}" class="btn btn--sm btn--ghost">View →</a></td>
+          <td><a href="${viewLink}" class="btn btn--sm btn--ghost" style="${isCancelled ? 'visibility:hidden' : ''}">View →</a></td>
         </tr>`;
     }).join('');
   }

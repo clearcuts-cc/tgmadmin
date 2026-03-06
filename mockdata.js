@@ -110,6 +110,8 @@ const MockData = (() => {
             specialRequests: b.special_requests || '',
             rate: Number(b.rate) || 0, nights: b.nights || 1,
             advance_paid: Number(b.advance_paid) || 0,
+            cancelledAt: b.cancelled_at || null,
+            cancelledReason: b.cancelled_reason || '',
         };
     }
     function normalizeMenu(m) {
@@ -409,6 +411,30 @@ const MockData = (() => {
                 }
             } catch (err) {
                 console.error('updateBookingStatus exception:', err);
+            }
+        },
+        async cancelBooking(bookingId, reason) {
+            const b = _cache.bookings.find(b => b.id === bookingId);
+            if (b) {
+                b.status = 'cancelled';
+                b.cancelledAt = new Date().toISOString();
+                b.cancelledReason = reason;
+            }
+            try {
+                const { error } = await db().from('bookings').update({
+                    status: 'cancelled',
+                    cancelled_at: new Date().toISOString(),
+                    cancelled_reason: reason
+                }).eq('id', bookingId);
+
+                if (error) {
+                    console.error('cancelBooking error:', error);
+                    GM.toast('Failed to cancel booking', 'error');
+                } else {
+                    GM.toast('Booking cancelled successfully', 'success');
+                }
+            } catch (err) {
+                console.error('cancelBooking exception:', err);
             }
         },
 
@@ -795,6 +821,19 @@ const MockData = (() => {
                         room: stay.room, checkIn: stay.checkinDate, checkOut: stay.checkoutDate,
                         nights: stay.nights, total: stay.payments.reduce((s, p) => s + p.amount, 0),
                         status: 'active'
+                    });
+                }
+            });
+
+            // 3. Add Cancelled Bookings
+            _cache.bookings.filter(b => b.status === 'cancelled').forEach(b => {
+                if (!result[b.guestId]) result[b.guestId] = [];
+                // Check if already in (avoid duplicates if same booking ID exists in history for some reason)
+                if (!result[b.guestId].find(x => x.checkIn === b.checkIn && x.status === 'cancelled')) {
+                    result[b.guestId].push({
+                        room: b.roomNumber, checkIn: b.checkIn, checkOut: b.checkOut,
+                        nights: b.nights, total: 0, status: 'cancelled',
+                        cancelledAt: b.cancelledAt, cancelledReason: b.cancelledReason
                     });
                 }
             });

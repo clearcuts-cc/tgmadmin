@@ -240,6 +240,9 @@
             <button class="btn btn--primary btn--full btn--lg animate-in" id="confirm-checkin" style="margin-bottom:0.5rem;">
               ✔ Collect Payment &amp; Confirm Check-in
             </button>
+            <button class="btn btn--danger btn--full animate-in" id="cancel-booking-btn" style="margin-bottom:0.5rem;">
+              ✕ Cancel Booking
+            </button>
             <a href="#checkin" class="btn btn--ghost btn--full">← Back to Room Board</a>
 
           </div>
@@ -294,5 +297,31 @@
           }
         }, 'Collect & Check In', false);
     });
+
+    // Cancel Booking Logic
+    const cancelBtn = document.getElementById('cancel-booking-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        GM.confirm('Cancel Booking',
+          `Are you sure you want to cancel this booking for <strong>${booking.guestName}</strong> — Room ${room.number}?<br><br>Check-in: ${GM.fmt.date(booking.checkIn)} | Check-out: ${GM.fmt.date(booking.checkOut)}<br><br><span style="color:var(--text-muted);font-size:0.85rem;">This action cannot be undone. You will be asked for a reason next.</span>`,
+          () => {
+            // Use custom prompt instead of window.prompt
+            GM.prompt('Cancellation Reason', 'Please provide a reason for cancellation (optional):', (reason) => {
+              GM.btnLoading(cancelBtn, true);
+              setTimeout(async () => {
+                try {
+                  await MockData.cancelBooking(booking.id, reason);
+                  window.location.hash = '#checkin'; // Go back to selector
+                } catch (err) {
+                  console.error('Cancellation error:', err);
+                } finally {
+                  GM.btnLoading(cancelBtn, false);
+                }
+              }, 800);
+            }, 'No reason provided', 'Confirm Cancellation');
+          },
+          'Yes, Cancel Booking', true);
+      });
+    }
   }
 })();

@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
             email,
             password,
             email_confirm: false, // Wait for verification
-            user_metadata: { name },
+            user_metadata: { name, role: 'employee' },
         });
 
         if (createErr) {

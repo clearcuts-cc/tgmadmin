@@ -6,7 +6,7 @@
    Usage: GM.toast("Room checked in!", "success")
           GM.toast("Error saving.", "error")
    Types: success | error | info | warning
-─────────────────────────────────────────────────────────── */
+ ─────────────────────────────────────────────────────────── */
 const GM = (() => {
 
     /* ── TOAST ─────────────────────────────────────────────── */
@@ -51,6 +51,40 @@ const GM = (() => {
         overlay.querySelector("#gm-dialog-cancel").addEventListener("click", close);
         overlay.querySelector("#gm-dialog-confirm").addEventListener("click", () => { close(); onConfirm(); });
         overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+    }
+
+    /* ── PROMPT DIALOG ─────────────────────────────────────── */
+    function prompt(title, message, onConfirm, placeholder = "Enter reason...", confirmLabel = "Save") {
+        const overlay = document.createElement("div");
+        overlay.className = "gm-dialog-overlay";
+        overlay.innerHTML = `
+      <div class="gm-dialog">
+        <h3 class="gm-dialog__title">${title}</h3>
+        <p class="gm-dialog__msg">${message}</p>
+        <div style="margin:1rem 0;">
+          <input type="text" class="form-input" id="gm-prompt-input" placeholder="${placeholder}" autofocus style="width:100%;">
+        </div>
+        <div class="gm-dialog__actions">
+          <button class="btn btn--ghost" id="gm-dialog-cancel">Cancel</button>
+          <button class="btn btn--primary" id="gm-dialog-confirm">${confirmLabel}</button>
+        </div>
+      </div>`;
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add("gm-dialog-overlay--show"));
+        const input = overlay.querySelector("#gm-prompt-input");
+        function close() {
+            overlay.classList.remove("gm-dialog-overlay--show");
+            overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+        }
+        overlay.querySelector("#gm-dialog-cancel").addEventListener("click", close);
+        overlay.querySelector("#gm-dialog-confirm").addEventListener("click", () => {
+            const val = input.value.trim();
+            close();
+            onConfirm(val);
+        });
+        input.addEventListener("keydown", e => { if (e.key === "Enter") overlay.querySelector("#gm-dialog-confirm").click(); });
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        setTimeout(() => input.focus(), 100);
     }
 
     /* ── BUTTON SPINNER ────────────────────────────────────── */
@@ -201,7 +235,7 @@ const GM = (() => {
         overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     }
 
-    return { toast, confirm, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, init };
+    return { toast, confirm, prompt, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, init };
 })();
 
 // Auto-init on DOM ready (only in legacy multi-page mode; SPA router handles its own init)
@@ -209,4 +243,3 @@ document.addEventListener("DOMContentLoaded", () => {
     // In SPA mode (router.js loaded), sidebar init is handled by router.js
     if (!window.GMNav) GM.init();
 });
-

@@ -75,7 +75,9 @@
     passToggle.addEventListener('click', () => {
       const t = passEl.type === 'password';
       passEl.type = t ? 'text' : 'password';
-      passToggle.textContent = t ? '🙈' : '👁';
+      // Use clean eye symbol
+      passToggle.innerHTML = t ? '👁' : '✕';
+      passToggle.style.opacity = t ? '1' : '0.6';
     });
 
     // Toast helper (standalone for auth page)
@@ -130,8 +132,17 @@
       // Store session info for header display
       const user = data.user;
       const meta = user.user_metadata || {};
-      // role stored in metadata: 'admin' or 'employee' (lowercase)
-      const role = (meta.role || 'admin').toLowerCase();
+
+      // Fetch role from profiles table (source of truth) — user_metadata may not always have it
+      let role = 'employee'; // safe default
+      try {
+        const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single();
+        if (profile && profile.role) role = profile.role.toLowerCase();
+        else role = (meta.role || 'employee').toLowerCase(); // fallback to metadata
+      } catch (_) {
+        role = (meta.role || 'employee').toLowerCase();
+      }
+
       localStorage.setItem('gm_session', JSON.stringify({
         name: meta.name || meta.full_name || email.split('@')[0],
         role: role,

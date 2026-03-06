@@ -332,14 +332,15 @@
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
                <span class="badge ${statusClass}">${statusLabel}</span>
-               <div style="display:flex;gap:0.4rem;">
-                 <button class="btn btn--sm btn--ghost btn--icon" title="View Items" onclick="GMViewOrder('${ord.id}')">👁</button>
-                 ${isPending ? `<button class="btn btn--sm btn--primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="GMMarkDelivered('${ord.id}')">Mark Delivered</button>` : ''}
-               </div>
-            </div>
-          </div>
-          <div style="font-weight:500;margin-top:0.2rem;color:var(--gold-bright);">Total: ${GM.fmt.currency(total)}</div>
-        </div>`;
+                <div style="display:flex;gap:0.4rem;">
+                  <button class="btn btn--sm btn--ghost btn--icon" title="View Items" onclick="GMViewOrder('${ord.id}')">👁</button>
+                  <button class="btn btn--sm btn--ghost btn--icon" title="Print Bill" onclick="GMPrintFoodBill('${ord.id}')" style="color:var(--gold-bright);">⎙</button>
+                  ${isPending ? `<button class="btn btn--sm btn--primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="GMMarkDelivered('${ord.id}')">Mark Delivered</button>` : ''}
+                </div>
+             </div>
+           </div>
+           <div style="font-weight:500;margin-top:0.2rem;color:var(--gold-bright);">Total: ${GM.fmt.currency(ord.total || total)}</div>
+         </div>`;
     }).join('');
   }
 
@@ -374,6 +375,90 @@
     }, 'Yes, Delivered');
   };
 
+  /* ── PRINT FOOD BILL ────────────────────────────────────── */
+  window.GMPrintFoodBill = (id) => {
+    const ord = MockData.orders.find(o => o.id === id);
+    if (!ord) return;
+
+    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
+    const subtotal = ord.items.reduce((s, i) => s + i.price * i.qty, 0);
+    const gstAmount = Math.round(subtotal * (foodGST / 100));
+
+    const printWin = window.open('', '_blank', 'width=400,height=600');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Food Bill - ${ord.room}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #111; line-height: 1.5; font-size: 16px; }
+            .receipt { border: 1px solid #ddd; padding: 25px; max-width: 450px; margin: auto; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+            .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 15px; margin-bottom: 20px; }
+            .hotel-name { font-weight: 800; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px; color: #000; }
+            .meta { font-size: 1rem; margin: 12px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #bbb; padding-bottom: 10px; }
+            .items { width: 100%; font-size: 1rem; border-collapse: collapse; margin: 20px 0; }
+            .items th { text-align: left; border-bottom: 2px solid #eee; padding: 8px 0; text-transform: uppercase; font-size: 0.85rem; color: #666; }
+            .items td { padding: 10px 0; border-bottom: 1px solid #f9f9f9; }
+            .total-row { display: flex; justify-content: space-between; font-size: 1rem; margin-top: 8px; color: #444; }
+            .grand-total { border-top: 2px solid #111; margin-top: 15px; padding-top: 12px; font-weight: 800; font-size: 1.3rem; display: flex; justify-content: space-between; color: #000; }
+            .footer { text-align: center; margin-top: 35px; font-size: 0.9rem; color: #555; font-style: italic; border-top: 1px solid #eee; padding-top: 15px; }
+            @media print { 
+              body { padding: 0; background: none; font-size: 18px; } 
+              .receipt { border: none; box-shadow: none; max-width: 650px; width: 100%; padding: 40px; } 
+              .hotel-name { font-size: 2.2rem; }
+              .grand-total { font-size: 1.8rem; }
+              .items th, .items td { padding: 12px 0; }
+            }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="receipt">
+            <div class="header">
+              <div class="hotel-name">The Grand Mist</div>
+              <div style="font-size: 0.7rem; color: #666;">Luxury Stay & Dining</div>
+            </div>
+            <div class="meta">
+              <span><strong>Room:</strong> ${ord.room}</span>
+              <span><strong>ID:</strong> #${ord.id.slice(0, 6)}</span>
+            </div>
+            <div style="font-size: 0.9rem; margin-bottom: 15px; border-left: 3px solid #111; padding-left: 10px;">
+              <strong>Guest:</strong> ${ord.guestName}<br>
+              <strong>Date:</strong> ${GM.fmt.datetime(ord.createdAt)}
+            </div>
+            <table class="items">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style="text-align:center;">Qty</th>
+                  <th style="text-align:right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${ord.items.map(i => `
+                  <tr>
+                    <td>${i.name}</td>
+                    <td style="text-align:center;">${i.qty}</td>
+                    <td style="text-align:right;">₹${i.price * i.qty}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="total-row"><span>Subtotal</span><span>₹${subtotal}</span></div>
+            <div class="total-row"><span>GST (${foodGST}%)</span><span>₹${gstAmount}</span></div>
+            <div class="grand-total">
+              <span>GRAND TOTAL</span>
+              <span>₹${ord.total}</span>
+            </div>
+            <div class="footer">
+              Thank you for dining with us!<br>
+              Order Status: ${ord.status.toUpperCase()}
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+  };
+
   // Initial render
   renderCurrentOrder();
   renderHistory();
@@ -398,6 +483,7 @@
     delete window.GMOrderQty;
     delete window.GMOrderRemove;
     delete window.GMViewOrder;
+    delete window.GMPrintFoodBill;
     delete window.GMMarkDelivered;
   };
 })();

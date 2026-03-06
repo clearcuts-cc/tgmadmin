@@ -9,25 +9,12 @@
       <p>Complete record of all past guest stays — click any row to view full bill</p>
     </div>
     <div class="page-content">
-      <div class="filter-bar animate-in">
-        <div class="search-wrap" style="flex:1;max-width:360px;">
-          <input class="form-input" type="search" id="history-search" placeholder="Search guest, phone, room…" aria-label="Search stay history">
-        </div>
-        <select class="form-select" id="month-filter" style="max-width:150px;">
-          <option value="">All Months</option>
-          <option value="01">January</option><option value="02">February</option>
-          <option value="03">March</option><option value="04">April</option>
-          <option value="05">May</option><option value="06">June</option>
-          <option value="07">July</option><option value="08">August</option>
-          <option value="09">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
-        </select>
-        <select class="form-select" id="year-filter" style="max-width:120px;">
-          <option value="">All Years</option>
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-        </select>
-        <button class="btn btn--ghost btn--sm" id="clear-history-filters">Clear</button>
+      </div>
+      
+      <!-- Tabs -->
+      <div class="tabs animate-in" style="margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:2rem;">
+        <button class="tab-btn active" id="tab-completed" style="background:none; border:none; color:var(--text-muted); padding:0.75rem 0.25rem; cursor:pointer; font-weight:500; position:relative;">Completed Stays</button>
+        <button class="tab-btn" id="tab-cancelled" style="background:none; border:none; color:var(--text-muted); padding:0.75rem 0.25rem; cursor:pointer; font-weight:500; position:relative;">Cancelled Bookings</button>
       </div>
 
       <!-- Summary stats -->
@@ -79,8 +66,11 @@
     const totalStaysEl = document.getElementById('total-stays-count');
     const totalNightsEl = document.getElementById('total-nights-count');
     const totalRevEl = document.getElementById('total-revenue-count');
+    const tabCompleted = document.getElementById('tab-completed');
+    const tabCancelled = document.getElementById('tab-cancelled');
 
     let activeBill = null;
+    let activeTab = 'completed'; // 'completed' or 'cancelled'
 
     function fmtPaidAt(iso) {
       try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
@@ -258,7 +248,24 @@
         payments: s.payments
       }));
 
-      const allData = [...activeStays, ...historyData];
+      const cancelledBookings = MockData.bookings
+        .filter(b => b.status === 'cancelled')
+        .map(b => ({
+          id: b.id,
+          guestName: b.guestName,
+          phone: MockData.getGuestById(b.guestId)?.phone || '',
+          room: b.roomNumber,
+          checkIn: b.checkIn,
+          checkOut: b.checkOut,
+          nights: b.nights,
+          grandTotal: 0,
+          billNo: 'CANC',
+          status: 'cancelled',
+          cancelledAt: b.cancelledAt,
+          cancelledReason: b.cancelledReason
+        }));
+
+      const allData = activeTab === 'completed' ? [...activeStays, ...historyData] : cancelledBookings;
 
       const filtered = allData.filter(rec => {
         const matchQ = (rec.guestName + (rec.phone || '') + rec.room).toLowerCase().includes(q);
@@ -276,19 +283,20 @@
       emptyState.classList.toggle('hidden', filtered.length > 0);
 
       tbody.innerHTML = filtered.map((rec, i) => `
-          <tr style="cursor:pointer;" onclick="window.GMViewBill(${i})" title="Click to view full bill">
+          <tr style="${rec.status === 'cancelled' ? '' : 'cursor:pointer;'}" onclick="${rec.status === 'cancelled' ? '' : `window.GMViewBill(${i})`}" title="${rec.status === 'cancelled' ? rec.cancelledReason : 'Click to view full bill'}">
             <td style="font-size:0.75rem;color:var(--text-muted);">${String(i + 1).padStart(2, '0')}</td>
             <td style="font-weight:500;">
               ${rec.guestName}
               ${rec.status === 'active' ? ' <span class="badge badge--success" style="font-size:0.55rem;vertical-align:middle;padding:1px 4px;">ACTIVE</span>' : ''}
+              ${rec.status === 'cancelled' ? ' <span class="badge badge--gray" style="font-size:0.55rem;vertical-align:middle;padding:1px 4px;">CANCELLED</span>' : ''}
             </td>
             <td style="font-size:0.85rem;color:var(--text-secondary);">${rec.phone || '—'}</td>
             <td><span style="background:var(--bg-raised);border-radius:4px;padding:2px 8px;font-size:0.8rem;">Room ${rec.room}</span></td>
             <td>${GM.fmt.date(rec.checkIn)}</td>
             <td>${GM.fmt.date(rec.checkOut)}</td>
             <td style="text-align:center;"><span style="font-family:var(--font-display);font-size:1rem;">${rec.nights}</span></td>
-            <td style="color:var(--gold-bright);font-weight:600;">${GM.fmt.currency(rec.grandTotal)}</td>
-            <td style="font-size:0.78rem;color:var(--text-muted);">${rec.billNo || rec.id || '—'}</td>
+            <td style="color:var(--gold-bright);font-weight:600;">${rec.status === 'cancelled' ? '—' : GM.fmt.currency(rec.grandTotal)}</td>
+            <td style="font-size:0.78rem;color:var(--text-muted);">${rec.status === 'cancelled' ? GM.fmt.date(rec.cancelledAt) : (rec.billNo || rec.id || '—')}</td>
           </tr>`).join('');
 
       window.GMViewBill = (i) => openBill(filtered[i]);
@@ -297,15 +305,36 @@
     searchInput.addEventListener('input', renderHistory);
     monthFilter.addEventListener('change', renderHistory);
     yearFilter.addEventListener('change', renderHistory);
+
+    function switchTab(tab) {
+      activeTab = tab;
+      tabCompleted.classList.toggle('active', tab === 'completed');
+      tabCancelled.classList.toggle('active', tab === 'cancelled');
+
+      // Visual indicator for active tab (simple underline)
+      tabCompleted.style.borderBottom = tab === 'completed' ? '2px solid var(--gold-bright)' : 'none';
+      tabCompleted.style.color = tab === 'completed' ? 'var(--gold-bright)' : 'var(--text-muted)';
+      tabCancelled.style.borderBottom = tab === 'cancelled' ? '2px solid var(--gold-bright)' : 'none';
+      tabCancelled.style.color = tab === 'cancelled' ? 'var(--gold-bright)' : 'var(--text-muted)';
+
+      renderHistory();
+    }
+
+    tabCompleted.addEventListener('click', () => switchTab('completed'));
+    tabCancelled.addEventListener('click', () => switchTab('cancelled'));
+
     document.getElementById('clear-history-filters').addEventListener('click', () => {
       searchInput.value = ''; monthFilter.value = ''; yearFilter.value = '';
       renderHistory();
     });
 
+    // Initial styles for tabs
+    switchTab('completed');
+
     // REALTIME UPDATES
     window.addEventListener('gm:data-change', (e) => {
       const table = e.detail.table;
-      if (table === 'history' || table === 'active_stays') renderHistory();
+      if (table === 'history' || table === 'active_stays' || table === 'bookings') renderHistory();
     });
 
     renderHistory();

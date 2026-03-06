@@ -13,15 +13,21 @@
     /* Expose role globally so all page modules + nav can read it */
     window.GMRole = (session.role || 'admin').toLowerCase();
 
+    /* Helper: true if current user is an employee/manager (not admin/owner) */
+    window.GMIsManager = () => window.GMRole === 'employee';
+
+    /* Simple boolean — set once at startup, used in template literals across all page modules */
+    window.GMIsAdmin = window.GMRole !== 'employee';
+
     // Rebuild nav now that we know the user's role (hides admin-only items for employees)
     if (window.GMNav && window.GMNav.buildNav) {
         window.GMNav.buildNav();
     }
 
-    /* Permission helpers — employees can only add, not edit/delete */
+    /* Permission helpers — employees/managers cannot edit or delete */
     window.GMCan = {
-        edit: () => window.GMRole !== 'employee',
-        delete: () => window.GMRole !== 'employee',
+        edit: () => window.GMIsAdmin,
+        delete: () => window.GMIsAdmin,
     };
 
     /* ── POPULATE HEADER ───────────────────────────────────── */
@@ -29,7 +35,11 @@
     const roleEl = document.getElementById('header-role');
     const avatarEl = document.getElementById('header-avatar');
     if (nameEl) nameEl.textContent = session.name || 'Admin';
-    if (roleEl) roleEl.textContent = session.role || 'Manager';
+    /* Show human-friendly role label: employee → Manager, anything else → Admin */
+    if (roleEl) roleEl.textContent = window.GMIsManager() ? 'Manager' : 'Admin';
+    const brandTagEl = document.getElementById('brand-tag');
+    if (brandTagEl) brandTagEl.textContent = `KODAIKANAL · ${window.GMIsManager() ? 'MANAGER' : 'ADMIN'}`;
+    document.title = `The Grand Mist — ${window.GMIsManager() ? 'Manager' : 'Admin'}`;
     if (avatarEl) avatarEl.textContent = (session.name || 'A').charAt(0).toUpperCase();
 
     /* ── LOGOUT ─────────────────────────────────────────────── */

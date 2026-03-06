@@ -10,7 +10,7 @@
           <p>Manage menu items by category • Toggle availability anytime</p>
           <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;">* All prices are exclusive of GST</p>
         </div>
-        <button class="btn btn--primary" id="add-item-btn">＋ Add Menu Item</button>
+        ${window.GMIsAdmin ? `<button class="btn btn--primary" id="add-item-btn">＋ Add Menu Item</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -98,13 +98,14 @@
               <div class="menu-item__desc">${item.description}</div>
             </div>
             <div class="menu-item__price">₹${item.price}</div>
+            ${window.GMIsAdmin ? `
             <label class="toggle" title="Toggle availability">
               <input type="checkbox" ${item.available ? 'checked' : ''} onchange="GMMenuToggle('${item.id}', this.checked)">
               <span class="toggle-slider"></span>
-            </label>
+            </label>` : `<span class="badge ${item.available ? 'badge--green' : 'badge--gray'}" style="font-size:0.7rem;">${item.available ? 'Available' : 'Unavailable'}</span>`}
             <div class="menu-item__actions">
-              ${window.GMCan?.edit() !== false ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMMenuEdit('${item.id}')">✏</button>` : ''}
-              ${window.GMCan?.delete() !== false ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMMenuDelete('${item.id}')">🗑</button>` : ''}
+              ${window.GMIsAdmin ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMMenuEdit('${item.id}')">✏</button>` : ''}
+              ${window.GMIsAdmin ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMMenuDelete('${item.id}')">🗑</button>` : ''}
             </div>
           </div>`).join('')}
         </div>`;
@@ -139,13 +140,16 @@
     modal.classList.add('open');
   };
 
-  document.getElementById('add-item-btn').addEventListener('click', () => {
-    editingId = null;
-    modalTitle.textContent = 'Add Menu Item';
-    document.getElementById('item-form').reset();
-    document.getElementById('item-available').checked = true;
-    modal.classList.add('open');
-  });
+  const addItemBtn = document.getElementById('add-item-btn');
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', () => {
+      editingId = null;
+      modalTitle.textContent = 'Add Menu Item';
+      document.getElementById('item-form').reset();
+      document.getElementById('item-available').checked = true;
+      modal.classList.add('open');
+    });
+  }
 
   function closeModal() { modal.classList.remove('open'); }
   document.getElementById('modal-close').addEventListener('click', closeModal);

@@ -133,7 +133,11 @@
     }
 
     body += `
-      <div class="divider" style="margin:1rem 0;"></div>
+      <div class="divider" style="margin:1rem 0;"></div>`;
+
+    /* Only admins can toggle maintenance mode */
+    if (window.GMIsAdmin) {
+      body += `
       <h4 style="margin-bottom:0.5rem;">🔧 Maintenance Override</h4>
       <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">
         Manually mark this room as under maintenance — overrides all booking-derived statuses.
@@ -141,6 +145,7 @@
       <button class="maintenance-toggle ${isMaint ? 'active' : ''}" id="maint-toggle-btn" data-room="${roomId}">
         ${isMaint ? '🔧 MAINTENANCE ACTIVE — Click to clear' : '⚙ Set Room to Maintenance'}
       </button>`;
+    }
 
     document.getElementById('panel-body').innerHTML = body;
     panel.classList.add('open');
@@ -148,20 +153,23 @@
       grid.classList.add('panel-open');
     }
 
-    document.getElementById('maint-toggle-btn').addEventListener('click', function () {
-      const rid = this.dataset.room;
-      if (st === 'maintenance') {
-        GM.confirm('Clear Maintenance',
-          `Remove maintenance flag from Room ${room.number}? Status will revert to booking data.`,
-          () => { MockData.clearMaintenance(rid); GM.toast(`Room ${room.number} — maintenance cleared.`, 'info'); renderGrid(); openPanel(rid); },
-          'Clear Maintenance', false);
-      } else {
-        GM.confirm('Set Maintenance',
-          `Mark Room ${room.number} as under maintenance? This overrides any active booking status.`,
-          () => { MockData.setMaintenance(rid); GM.toast(`Room ${room.number} set to maintenance mode.`, 'warning'); renderGrid(); openPanel(rid); },
-          'Set Maintenance', true);
-      }
-    });
+    const maintBtn = document.getElementById('maint-toggle-btn');
+    if (maintBtn) {
+      maintBtn.addEventListener('click', function () {
+        const rid = this.dataset.room;
+        if (st === 'maintenance') {
+          GM.confirm('Clear Maintenance',
+            `Remove maintenance flag from Room ${room.number}? Status will revert to booking data.`,
+            () => { MockData.clearMaintenance(rid); GM.toast(`Room ${room.number} — maintenance cleared.`, 'info'); renderGrid(); openPanel(rid); },
+            'Clear Maintenance', false);
+        } else {
+          GM.confirm('Set Maintenance',
+            `Mark Room ${room.number} as under maintenance? This overrides any active booking status.`,
+            () => { MockData.setMaintenance(rid); GM.toast(`Room ${room.number} set to maintenance mode.`, 'warning'); renderGrid(); openPanel(rid); },
+            'Set Maintenance', true);
+        }
+      });
+    }
   }
 
   renderGrid();
