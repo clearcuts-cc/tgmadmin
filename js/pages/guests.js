@@ -70,6 +70,11 @@
                 <label class="form-label" for="g-aadhaar">Aadhaar No.</label>
                 <input class="form-input" type="text" id="g-aadhaar" placeholder="XXXX XXXX XXXX" maxlength="14">
               </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Aadhaar Card Image (Compressed to 200KB)</label>
+                <input type="file" id="g-aadhaar-file" accept="image/*" class="form-input" style="padding:0.4rem;">
+                <div id="g-aadhaar-status" style="font-size:0.7rem;margin-top:0.25rem;color:var(--text-muted);"></div>
+              </div>
             </div>
           </form>
         </div>
@@ -86,6 +91,7 @@
     const empty = document.getElementById('guests-empty');
     const modal = document.getElementById('guest-modal');
     let editingGuestId = null;
+    let uploadedAadhaarUrl = '';
 
     function render() {
       const q = search.value.toLowerCase();
@@ -146,6 +152,8 @@
       document.getElementById('g-email').value = g.email || '';
       document.getElementById('g-address').value = g.address || '';
       document.getElementById('g-aadhaar').value = g.aadhaar || '';
+      uploadedAadhaarUrl = g.aadhaarUrl || '';
+      document.getElementById('g-aadhaar-status').textContent = uploadedAadhaarUrl ? '✅ Document already uploaded' : '';
       openModal('Edit Guest');
     };
 
@@ -173,6 +181,7 @@
             email: document.getElementById('g-email').value.trim(),
             address: document.getElementById('g-address').value.trim(),
             aadhaar: document.getElementById('g-aadhaar').value.trim(),
+            aadhaarUrl: uploadedAadhaarUrl,
           });
           GM.toast('Guest updated.', 'success');
         } else {
@@ -181,6 +190,7 @@
             email: document.getElementById('g-email').value.trim(),
             address: document.getElementById('g-address').value.trim(),
             aadhaar: document.getElementById('g-aadhaar').value.trim(),
+            aadhaarUrl: uploadedAadhaarUrl,
             totalStays: 0,
             lastStay: null,
             added_by: session.name || null,
@@ -190,6 +200,29 @@
         closeModal();
         render();
       }, 700);
+    });
+
+    // Handle Modal File Upload
+    const fileInput = document.getElementById('g-aadhaar-file');
+    const statusDiv = document.getElementById('g-aadhaar-status');
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      statusDiv.innerHTML = `<span class="btn-spinner"></span> Compressing…`;
+      try {
+        const compressed = await GM.compressImage(file, 200);
+        statusDiv.innerHTML = `<span class="btn-spinner"></span> Uploading…`;
+        const url = await MockData.uploadGuestDocument(compressed, file.name);
+        uploadedAadhaarUrl = url;
+        statusDiv.innerHTML = `✅ Aadhaar Ready`;
+        GM.toast('Aadhaar uploaded and compressed!', 'success');
+      } catch (err) {
+        console.error('Modal upload error:', err);
+        statusDiv.textContent = '❌ Upload failed';
+        GM.toast('Upload failed.', 'error');
+      }
     });
 
     search.addEventListener('input', render);
@@ -259,8 +292,17 @@
 
           <div class="card animate-in animate-in-delay-2">
             <h4 style="margin-bottom:0.75rem;">Documents</h4>
-            <div class="doc-img mb-sm"><span>🪪</span><span>Aadhaar — placeholder</span></div>
-            <div class="doc-img"><span>📷</span><span>Guest photo — placeholder</span></div>
+            ${guest.aadhaarUrl 
+              ? `<a href="${guest.aadhaarUrl}" target="_blank" class="doc-img mb-sm" style="text-decoration:none;display:flex;align-items:center;gap:0.75rem;">
+                   <span style="font-size:1.2rem;">🪪</span>
+                   <div style="flex:1;">
+                     <div style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">Aadhaar Card</div>
+                     <div style="font-size:0.7rem;color:var(--blue);">View Uploaded Document →</div>
+                   </div>
+                 </a>`
+              : `<div class="doc-img mb-sm" style="opacity:0.5;"><span>🪪</span><span>No Aadhaar uploaded</span></div>`
+            }
+            <div class="doc-img" style="opacity:0.5;"><span>📷</span><span>Guest photo — placeholder</span></div>
           </div>
         </div>
 

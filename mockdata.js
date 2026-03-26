@@ -97,6 +97,7 @@ const MockData = (() => {
         return {
             id: g.id, name: g.name, phone: g.phone, email: g.email || '',
             address: g.address || '', aadhaar: g.aadhaar || '',
+            aadhaarUrl: g.aadhaar_url || '',
             totalStays: g.total_stays || 0, lastStay: g.last_stay || null,
         };
     }
@@ -125,6 +126,7 @@ const MockData = (() => {
             id: o.id, bookingId: o.booking_id, guestName: o.guest_name || '',
             room: o.room || '', items: o.items || [], total: Number(o.total) || 0,
             status: o.status || 'pending', createdAt: o.created_at,
+            paymentStatus: o.payment_status || 'unpaid'
         };
     }
     function normalizeEvent(e) {
@@ -139,7 +141,7 @@ const MockData = (() => {
     }
     function normalizeHistory(h) {
         return {
-            billNo: h.bill_no, bookingId: h.booking_id,
+            id: h.id, billNo: h.bill_no, bookingId: h.booking_id,
             guestName: h.guest_name, phone: h.phone || '',
             room: h.room || '', roomType: h.room_type || '',
             checkIn: h.check_in, checkOut: h.check_out,
@@ -309,6 +311,7 @@ const MockData = (() => {
                 const { error } = await db().from('guests').insert({
                     id: guest.id, name: guest.name, phone: guest.phone,
                     email: guest.email, address: guest.address, aadhaar: guest.aadhaar,
+                    aadhaar_url: guestData.aadhaarUrl || '',
                     total_stays: guest.totalStays, last_stay: guest.lastStay,
                 });
 
@@ -338,6 +341,7 @@ const MockData = (() => {
             if (updates.email !== undefined) dbUpdates.email = updates.email;
             if (updates.address !== undefined) dbUpdates.address = updates.address;
             if (updates.aadhaar !== undefined) dbUpdates.aadhaar = updates.aadhaar;
+            if (updates.aadhaarUrl !== undefined) dbUpdates.aadhaar_url = updates.aadhaarUrl;
             if (updates.totalStays !== undefined) dbUpdates.total_stays = updates.totalStays;
             if (updates.lastStay !== undefined) dbUpdates.last_stay = updates.lastStay;
 
@@ -356,6 +360,37 @@ const MockData = (() => {
             db().from('guests').delete().eq('id', id).then(({ error }) => {
                 if (error) console.error('deleteGuest error:', error);
             });
+        },
+
+        // ── STORAGE ──────────────────────────────────────────────
+        async uploadGuestDocument(file, fileName) {
+            try {
+                // Ensure bucket exists (best effort, might fail if not owner but usually fine via client)
+                const { data: bucketData } = await db().storage.getBucket('guest-documents');
+                if (!bucketData) {
+                    await db().storage.createBucket('guest-documents', { public: true });
+                }
+
+                const path = `aadhaar/${Date.now()}_${fileName}`;
+                const { data, error } = await db()
+                    .storage
+                    .from('guest-documents')
+                    .upload(path, file);
+
+                if (error) throw error;
+
+                // Get public URL
+                const { data: { publicUrl } } = db()
+                    .storage
+                    .from('guest-documents')
+                    .getPublicUrl(path);
+
+                return publicUrl;
+            } catch (err) {
+                console.error('uploadGuestDocument error:', err);
+                GM.toast('Failed to upload document', 'error');
+                throw err;
+            }
         },
 
         // ── BOOKING CRUD ─────────────────────────────────────────
@@ -496,6 +531,7 @@ const MockData = (() => {
                 const { error } = await db().from('orders').insert({
                     id: o.id, booking_id: o.bookingId, guest_name: o.guestName,
                     room: o.room, items: o.items, total: o.total, status: o.status,
+                    payment_status: o.paymentStatus || 'unpaid',
                 });
 
                 if (error) {
@@ -510,11 +546,7 @@ const MockData = (() => {
         },
         async updateOrderStatus(orderId, status) {
             try {
-                const { error } = await db()
-                    .from('orders')
-                    .update({ status })
-                    .eq('id', orderId);
-
+                const { error } = await db().from('orders').update({ status }).eq('id', orderId);
                 if (error) {
                     console.error('updateOrderStatus error:', error);
                     GM.toast('Failed to update order status', 'error');
@@ -527,6 +559,23 @@ const MockData = (() => {
                 }
             } catch (err) {
                 console.error('updateOrderStatus exception:', err);
+                return false;
+            }
+        },
+        async updateOrderPaymentStatus(orderId, paymentStatus) {
+            try {
+                const { error } = await db().from('orders').update({ payment_status: paymentStatus }).eq('id', orderId);
+                if (error) {
+                    console.error('updateOrderPaymentStatus error:', error);
+                    GM.toast('Failed to update payment status', 'error');
+                    return false;
+                } else {
+                    const idx = _cache.orders.findIndex(o => o.id === orderId);
+                    if (idx !== -1) _cache.orders[idx].paymentStatus = paymentStatus;
+                    return true;
+                }
+            } catch (err) {
+                console.error('updateOrderPaymentStatus exception:', err);
                 return false;
             }
         },
@@ -600,7 +649,7 @@ const MockData = (() => {
         get activeStays() { return _cache.activeStays; },
         get completedBills() { return _cache.history; },
 
-        async startStay(booking, room, paymentMethod, paymentRef) {
+        async startStay(booking, room, paymentMethod, paymentRef, isDeferred = false) {
             const n = MockData.nightsBetween(booking.checkIn, booking.checkOut);
             const subtotal = n * room.rate;
             const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
@@ -611,6 +660,9 @@ const MockData = (() => {
             const dbId = crypto.randomUUID();
             const paymentDbId = crypto.randomUUID();
 
+            const advancePaid = Number(booking.advance_paid) || 0;
+            const collectionAmount = Math.max(0, amount - advancePaid);
+
             const stay = {
                 stayId, _dbId: dbId, bookingId: booking.id,
                 guestName: booking.guestName, room: booking.roomNumber,
@@ -618,10 +670,10 @@ const MockData = (() => {
                 checkoutDate: booking.checkOut,
                 nights: Number(n),
                 rate: Number(room.rate),
-                payments: [{
+                payments: isDeferred ? [] : [{
                     _dbId: paymentDbId, type: 'room',
-                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)}) + GST ${roomGST}%`,
-                    amount: Number(amount),
+                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)}) + GST ${roomGST}%` + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),
+                    amount: Number(collectionAmount),
                     paidAt: new Date().toISOString(),
                     method: paymentMethod, ref: paymentRef || '',
                 }]
@@ -644,16 +696,18 @@ const MockData = (() => {
                     throw error;
                 }
 
-                // Insert the initial payment
-                const { error: e2 } = await db().from('stay_payments').insert({
-                    id: paymentDbId, stay_id: dbId, booking_id: booking.id,
-                    type: 'room', description: stay.payments[0].description,
-                    amount: Number(amount), method: paymentMethod, ref: paymentRef || '',
-                });
+                // Insert the initial payment (if not deferred)
+                if (!isDeferred) {
+                    const { error: e2 } = await db().from('stay_payments').insert({
+                        id: paymentDbId, stay_id: dbId, booking_id: booking.id,
+                        type: 'room', description: stay.payments[0].description,
+                        amount: Number(collectionAmount), method: paymentMethod, ref: paymentRef || '',
+                    });
 
-                if (e2) {
-                    console.error('startStay payment error:', e2);
-                    GM.toast('Warning: Room payment not recorded in cloud', 'warning');
+                    if (e2) {
+                        console.error('startStay payment error:', e2);
+                        GM.toast('Warning: Room payment not recorded in cloud', 'warning');
+                    }
                 }
 
                 // Record advance payment as a negative deduction if booking had advance
@@ -710,6 +764,24 @@ const MockData = (() => {
                 console.error('addPayment exception:', err);
             }
             return true;
+        },
+
+        async deleteStayPaymentByDescription(bookingId, description) {
+            const stay = _cache.activeStays[bookingId];
+            if (!stay) return false;
+            try {
+                const { error } = await db().from('stay_payments').delete().eq('stay_id', stay._dbId).eq('description', description);
+                if (error) {
+                    console.error('deleteStayPayment error:', error);
+                    return false;
+                } else {
+                    stay.payments = stay.payments.filter(p => p.description !== description);
+                    return true;
+                }
+            } catch (err) {
+                console.error('deleteStayPayment exception:', err);
+                return false;
+            }
         },
 
         getStayTotal(bookingId) {

@@ -235,7 +235,46 @@ const GM = (() => {
         overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     }
 
-    return { toast, confirm, prompt, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, init };
+    /* ── IMAGE COMPRESSION ─────────────────────────────────── */
+    async function compressImage(file, maxKB = 200) {
+        return new Promise((resolve, reject) => {
+            if (!file.type.startsWith('image/')) return resolve(file);
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = e => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_DIM = 1200;
+                    if (width > MAX_DIM || height > MAX_DIM) {
+                        if (width > height) { height *= MAX_DIM / width; width = MAX_DIM; }
+                        else { width *= MAX_DIM / height; height = MAX_DIM; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    let quality = 0.9;
+                    const step = 0.1;
+                    const convert = (q) => new Promise(res => canvas.toBlob(res, 'image/jpeg', q));
+                    const check = async (q) => {
+                        const blob = await convert(q);
+                        if (blob.size / 1024 <= maxKB || q <= 0.1) {
+                            return new File([blob], file.name, { type: 'image/jpeg' });
+                        }
+                        return check(q - step);
+                    };
+                    check(quality).then(resolve).catch(reject);
+                };
+            };
+            reader.onerror = reject;
+        });
+    }
+
+    return { toast, confirm, prompt, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, compressImage, init };
 })();
 
 // Auto-init on DOM ready (only in legacy multi-page mode; SPA router handles its own init)

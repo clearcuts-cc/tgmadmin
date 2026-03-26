@@ -129,6 +129,9 @@
     const roomTotal = nights * room.rate;
 
     main.innerHTML = `
+        <style>
+        </style>
+
         <div class="page-header animate-in">
           <div style="display:flex;align-items:center;gap:1rem;">
             <a href="#checkin" class="btn btn--ghost btn--sm">← Room Board</a>
@@ -187,23 +190,27 @@
             <!-- Payment Collection -->
             <div class="card mb-md animate-in animate-in-delay-4" style="border-color:var(--gold-mid);" id="payment-section">
               <h3 style="margin-bottom:0.1rem;">💳 Room Payment Collection</h3>
-              <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Collect room charges at check-in before confirming</p>
+              <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Collect room charges at check-in before confirming</p>
 
-              <div class="bill-section">
-                <div class="bill-section__title">Charge Breakdown</div>
-                <div class="bill-row">
-                  <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)})</span>
-                  <strong>${GM.fmt.currency(roomTotal)}</strong>
-                </div>
-                <div class="bill-row">
-                  <span id="ci-gst-label">Room GST (0%)</span>
-                  <strong id="ci-gst-amount">₹0</strong>
-                </div>
+              <h4 style="margin-bottom:0.5rem; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">Charge Breakdown</h4>
+              <div class="bill-row">
+                <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)})</span>
+                <strong>${GM.fmt.currency(roomTotal)}</strong>
               </div>
-              <div class="bill-grand" style="margin-bottom:1.25rem;">
+              <div class="bill-row">
+                <span id="ci-gst-label">Room GST</span>
+                <strong id="ci-gst-amount"></strong>
+              </div>
+              <div class="bill-row" id="ci-advance-row" style="border-top:1px dashed var(--border); margin-top:0.4rem; padding-top:0.4rem; display:none;">
+                <span>Advance Payment (Already Paid)</span>
+                <strong id="ci-advance-amount" style="color:var(--green);"></strong>
+              </div>
+
+              <div class="bill-grand" style="margin-top:1rem; margin-bottom:1.25rem;">
                 <span class="bill-grand__label">Amount to Collect</span>
-                <span class="bill-grand__value" id="ci-grand-total">${GM.fmt.currency(roomTotal)}</span>
+                <span class="bill-grand__value" id="ci-grand-total"></span>
               </div>
+
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;" id="payment-form-grid">
                 <div class="form-group">
@@ -237,28 +244,41 @@
               </div>
             </div>
 
-            <button class="btn btn--primary btn--full btn--lg animate-in" id="confirm-checkin" style="margin-bottom:0.5rem;">
+            <button class="btn btn--primary btn--full btn--lg animate-in" id="confirm-checkin" style="margin-top:1.5rem; margin-bottom:0.5rem;">
               ✔ Collect Payment &amp; Confirm Check-in
             </button>
             <button class="btn btn--danger btn--full animate-in" id="cancel-booking-btn" style="margin-bottom:0.5rem;">
               ✕ Cancel Booking
             </button>
-            <a href="#checkin" class="btn btn--ghost btn--full">← Back to Room Board</a>
+            <a href="#checkin" class="btn btn--ghost btn--full animate-in">← Back to Room Board</a>
 
           </div>
         </div>`;
 
     const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
     const gstAmount = Math.round(roomTotal * (roomGST / 100));
-    const grandTotal = roomTotal + gstAmount;
+    const advancePaid = Number(booking.advance_paid) || 0;
+    const grandTotal = Math.max(0, roomTotal + gstAmount - advancePaid);
 
-    document.getElementById('ci-gst-label').textContent = `Room GST (${roomGST}%)`;
+    document.getElementById('ci-gst-label').textContent = `Room GST(${roomGST} %)`;
     document.getElementById('ci-gst-amount').textContent = GM.fmt.currency(gstAmount);
-    document.getElementById('ci-grand-total').textContent = GM.fmt.currency(grandTotal);
+
+    const advRow = document.getElementById('ci-advance-row');
+    if (advancePaid > 0) {
+      document.getElementById('ci-advance-amount').textContent = `- ${GM.fmt.currency(advancePaid)} `;
+      advRow.style.display = 'flex';
+    } else {
+      advRow.style.display = 'none';
+    }
+
+    const grandEl = document.getElementById('ci-grand-total');
+    grandEl.textContent = GM.fmt.currency(grandTotal);
 
     // Responsive grids
     const infoGrid = document.getElementById('checkin-info-grid');
     const payGrid = document.getElementById('payment-form-grid');
+
+
     function handleResize() {
       const col = window.innerWidth < 600 ? '1fr' : '1fr 1fr';
       if (infoGrid) infoGrid.style.gridTemplateColumns = col;
@@ -274,24 +294,32 @@
 
       const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
       const gstAmount = Math.round(roomTotal * (roomGST / 100));
-      const grandTotal = roomTotal + gstAmount;
+      const advancePaid = Number(booking.advance_paid) || 0;
+      const grandTotal = Math.max(0, roomTotal + gstAmount - advancePaid);
+
+      const amountTip = GM.fmt.currency(grandTotal);
 
       GM.confirm('Confirm Check-in & Payment',
-        `Collect ${GM.fmt.currency(grandTotal)} (${method}) from ${booking.guestName} and check in to Room ${room.number}?`,
+        `Collect ${amountTip} (${method}) from ${booking.guestName} and check in to Room ${room.number}?`,
         async () => {
           const btn = document.getElementById('confirm-checkin');
           GM.btnLoading(btn, true);
           try {
-            await MockData.startStay(booking, room, method, ref);
+            await MockData.startStay(booking, room, method, ref, false);
             await MockData.updateBookingStatus(booking.id, 'checked_in');
 
             document.getElementById('checkin-success').classList.remove('hidden');
             document.getElementById('payment-section').classList.add('hidden');
             btn.classList.add('hidden');
-            GM.toast(`✔ ${booking.guestName} checked in to Room ${room.number} · ${GM.fmt.currency(grandTotal)} via ${method}`, 'success');
+
+            const successMsg = `✔ ${booking.guestName} checked in to Room ${room.number} · ${amountTip} via ${method}`;
+
+            document.getElementById('checkin-success').querySelector('p').textContent =
+              `${booking.guestName} is now checked in to Room ${room.number}. Total of ${amountTip} collected.`;
+
+            GM.toast(successMsg, 'success');
           } catch (err) {
             console.error('Check-in error:', err);
-            // Error toast shown by MockData
           } finally {
             GM.btnLoading(btn, false);
           }

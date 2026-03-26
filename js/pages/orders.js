@@ -57,7 +57,7 @@
                 <span class="bill-grand__value" id="order-total">₹0</span>
               </div>
             </div>
-            <button class="btn btn--primary btn--full mt-md" id="place-order-btn" disabled>Place Order &amp; Collect Payment</button>
+            <button class="btn btn--primary btn--full mt-md" id="place-order-btn" disabled>Place Order</button>
           </div>
         </div>
 
@@ -240,15 +240,27 @@
     const gstAmount = Math.round(subtotal * (foodGST / 100));
     pendingOrderTotal = subtotal + gstAmount;
 
-    document.getElementById('modal-subtotal').textContent = GM.fmt.currency(subtotal);
-    document.getElementById('modal-gst-amount').textContent = GM.fmt.currency(gstAmount);
-    document.getElementById('modal-gst-label').textContent = `GST (${foodGST}%)`;
-    document.getElementById('modal-order-total').textContent = GM.fmt.currency(pendingOrderTotal);
+    GM.confirm('Place Food Order', `Confirming order total ${GM.fmt.currency(pendingOrderTotal)} for Room ${selectedBooking.roomNumber}. It will be marked as UNPAID by default.`, async () => {
+      const desc = currentOrder.map(o => `${o.name} ×${o.qty}`).join(', ');
+      const orderId = crypto.randomUUID();
 
-    document.getElementById('modal-order-summary').innerHTML = currentOrder
-      .map(o => `<div>• ${o.name} ×${o.qty} — ${GM.fmt.currency(o.price * o.qty)}</div>`).join('');
-    document.getElementById('food-payment-ref').value = '';
-    paymentModal.classList.add('open');
+      await MockData.addOrder({
+        id: orderId,
+        bookingId: selectedBooking.id,
+        room: selectedBooking.roomNumber,
+        guestName: selectedBooking.guestName,
+        items: currentOrder.map(o => ({ menuId: o.menuId, name: o.name, qty: o.qty, price: o.price })),
+        total: pendingOrderTotal,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        paymentStatus: 'unpaid'
+      });
+
+      GM.toast(`Order placed for Room ${selectedBooking.roomNumber}. Marked as UNPAID.`, 'success');
+      currentOrder = [];
+      renderCurrentOrder();
+      renderHistory(selectedBooking?.id);
+    });
   });
 
   function closeModal() { paymentModal.classList.remove('open'); }
@@ -323,6 +335,10 @@
       const statusLabel = isPending ? 'Order Placed' : (ord.status.charAt(0).toUpperCase() + ord.status.slice(1));
       const statusClass = isPending ? 'badge--blue' : 'badge--green';
 
+      const isPaid = ord.paymentStatus === 'paid';
+      const paymentLabel = isPaid ? '✓ PAID' : '🔴 UNPAID';
+      const paymentClass = isPaid ? 'badge--green' : 'badge--red';
+
       return `
         <div style="padding:0.75rem 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;align-items:flex-start;">
@@ -331,7 +347,16 @@
               <div style="font-size:0.75rem;color:var(--text-muted);">Room ${ord.room || '—'} · ${GM.fmt.datetime(ord.createdAt)}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
-               <span class="badge ${statusClass}">${statusLabel}</span>
+                <div style="display:flex;gap:0.4rem;">
+                    <span class="badge ${statusClass}">${statusLabel}</span>
+                    <span class="badge ${paymentClass}" 
+                          onclick="GMToggleFoodPayment('${ord.id}')" 
+                          style="cursor:pointer;display:flex;align-items:center;gap:4px;" 
+                          title="Click to toggle Paid/Unpaid">
+                        ${paymentLabel} 
+                        <div class="toggle-switch ${isPaid ? 'on' : 'off'}" style="pointer-events:none;"></div>
+                    </span>
+                </div>
                 <div style="display:flex;gap:0.4rem;">
                   <button class="btn btn--sm btn--ghost btn--icon" title="View Items" onclick="GMViewOrder('${ord.id}')">👁</button>
                   <button class="btn btn--sm btn--ghost btn--icon" title="Print Bill" onclick="GMPrintFoodBill('${ord.id}')" style="color:var(--gold-bright);">⎙</button>
@@ -343,6 +368,38 @@
          </div>`;
     }).join('');
   }
+
+  window.GMToggleFoodPayment = async (id) => {
+    const ord = MockData.orders.find(o => o.id === id);
+    if (!ord) return;
+
+    const newStatus = ord.paymentStatus === 'paid' ? 'unpaid' : 'paid';
+    const desc = ord.items.map(o => `${o.name} ×${o.qty}`).join(', ');
+
+    if (newStatus === 'paid') {
+      GM.confirm('Mark as Paid', `Confirm payment collection of ${GM.fmt.currency(ord.total)} for this order?`, async () => {
+        const success = await MockData.updateOrderPaymentStatus(id, 'paid');
+        if (success) {
+          await MockData.addPaymentToStay(ord.bookingId, {
+            type: 'food',
+            description: `Food Order: ${desc}`,
+            amount: ord.total,
+            method: 'Cash',
+            ref: `Order #${id.slice(0, 6)}`
+          });
+          renderHistory(selectedBooking?.id);
+        }
+      });
+    } else {
+      GM.confirm('Mark as Unpaid', 'Move this amount back to room balance? It will be collected at checkout.', async () => {
+        const success = await MockData.updateOrderPaymentStatus(id, 'unpaid');
+        if (success) {
+          await MockData.deleteStayPaymentByDescription(ord.bookingId, `Food Order: ${desc}`);
+          renderHistory(selectedBooking?.id);
+        }
+      });
+    }
+  };
 
   /* ── ORDER DETAIL MODAL ─────────────────────────────────── */
   window.GMViewOrder = (id) => {

@@ -125,7 +125,9 @@
     const roomGstAmt = Math.round(roomSubtotal * (roomGST / 100));
     const roomChargeTotal = roomSubtotal + roomGstAmt;
 
-    // Distinguish payments
+    const bookingOrders = MockData.orders.filter(o => o.bookingId === booking.id);
+    const totalFoodOrders = bookingOrders.reduce((s, o) => s + o.total, 0);
+
     const roomPays = payments.filter(p => p.type === 'room');
     const roomPaymentsTotal = roomPays.reduce((s, p) => s + p.amount, 0);
 
@@ -187,13 +189,6 @@
             animation: slideIn 0.3s ease-out;
           }
           @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-          
-          .bill-balance--due { background: rgba(153, 27, 27, 0.15); border-radius: 6px; padding: 6px 12px; border: 1px solid rgba(248, 113, 113, 0.2); }
-          .bill-balance--due span:last-child { color: #f87171 !important; font-weight: 600; }
-          
-          /* Line items for the card reflection */
-          .bill-extra-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
-          .badge--tiny { font-size: 0.55rem; padding: 1px 4px; vertical-align: middle; margin-left: 4px; }
         </style>
         <div class="page-header animate-in">
           <div style="display:flex;align-items:center;gap:1rem;">
@@ -204,159 +199,218 @@
         <div class="page-content" style="padding-top:0;">
 
           <div id="bill-print-area">
-            <div class="bill-card animate-in">
+            <div class="receipt-bill animate-in">
 
-              <!-- Header -->
-              <div class="bill-header">
-                <div class="bill-resort-name">${s.resortName || 'The Grand Mist'}</div>
-                <div class="bill-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} &nbsp;·&nbsp; ${stars}</div>
-                ${s.resortGSTIN ? `<div class="bill-resort-sub" style="margin-top:0.25rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
+              <!-- HEADER -->
+              <div class="rb-header">
+                <h1 class="rb-resort-name">${s.resortName || 'THE GRAND MIST'}</h1>
+                <p class="rb-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
               </div>
 
-              <!-- Guest info grid -->
-              <div class="bill-guest-info" id="bill-guest-grid">
-                <div class="bill-guest-info-item">
-                  <div class="bill-info-label">Guest</div>
-                  <div class="bill-info-value">${booking.guestName}</div>
+              <div class="rb-divider-full"></div>
+
+              <!-- GUEST INFO ROW -->
+              <div class="rb-info-grid">
+                <div class="rb-info-col">
+                  <span class="rb-info-label">GUEST</span>
+                  <span class="rb-info-value">${booking.guestName}</span>
                 </div>
-                <div class="bill-guest-info-item">
-                  <div class="bill-info-label">Room</div>
-                  <div class="bill-info-value">${booking.roomNumber} — ${room.type}</div>
-                </div>
-                <div class="bill-guest-info-item">
-                  <div class="bill-info-label">Check-in</div>
-                  <div class="bill-info-value">${GM.fmt.date(booking.checkIn)}</div>
-                </div>
-                <div class="bill-guest-info-item">
-                  <div class="bill-info-label">Check-out · Nights</div>
-                  <div class="bill-info-value">${GM.fmt.date(booking.checkOut)} &nbsp;·&nbsp; ${nights} nights</div>
+                <div class="rb-info-col">
+                  <span class="rb-info-label">ROOM</span>
+                  <span class="rb-info-value">${booking.roomNumber} — ${room.type}</span>
                 </div>
               </div>
 
-              <!-- Room Charges -->
-              <div class="bill-section-header">🏠 &nbsp;Room Charges</div>
-              <div class="bill-line-row">
-                <div class="bill-line-left">
-                  <div class="bill-line-title">Room Rent — ${nights} nights × ${GM.fmt.currency(rate)}</div>
-                  <div class="bill-line-meta">${GM.fmt.date(booking.checkIn)} to ${GM.fmt.date(booking.checkOut)}</div>
+              <div class="rb-info-grid">
+                <div class="rb-info-col">
+                  <span class="rb-info-label">CHECK-IN</span>
+                  <span class="rb-info-value">${GM.fmt.date(booking.checkIn)}</span>
                 </div>
-                <div class="bill-line-right">
-                  <span class="bill-amount">${GM.fmt.currency(roomSubtotal)}</span>
-                </div>
-              </div>
-              <div class="bill-line-row" style="border-top:none;padding-top:0;">
-                <div class="bill-line-left">
-                  <div class="bill-line-title">GST (${roomGST}%)</div>
-                </div>
-                <div class="bill-line-right">
-                  <span class="bill-amount">${GM.fmt.currency(roomGstAmt)}</span>
+                <div class="rb-info-col">
+                  <span class="rb-info-label">CHECK-OUT · NIGHTS</span>
+                  <span class="rb-info-value">${GM.fmt.date(booking.checkOut)} · ${nights} nights</span>
                 </div>
               </div>
 
-              <!-- Food Orders -->
-              <div class="bill-section-header">🍽 &nbsp;Food Orders</div>
-              ${foodPays.length ? foodPays.map(lineRow).join('') : emptySection()}
+              <div class="rb-divider-full"></div>
 
-              <!-- Events -->
-              <div class="bill-section-header">🎉 &nbsp;Events</div>
-              ${eventPays.length ? eventPays.map(lineRow).join('') : emptySection()}
+              <!-- ROOM CHARGES SECTION -->
+              <div class="rb-section-label">🏠 ROOM CHARGES</div>
+              <div class="rb-row">
+                <div class="rb-row-left">
+                  <span class="rb-row-title">Room Rent — ${nights} nights × ${GM.fmt.currency(rate)}</span>
+                  <span class="rb-row-meta">${GM.fmt.date(booking.checkIn)} to ${GM.fmt.date(booking.checkOut)}</span>
+                </div>
+                <span class="rb-row-amount">${GM.fmt.currency(roomSubtotal)}</span>
+              </div>
+              <div class="rb-row">
+                <div class="rb-row-left">
+                  <span class="rb-row-title">GST (${roomGST}%)</span>
+                </div>
+                <span class="rb-row-amount">${GM.fmt.currency(roomGstAmt)}</span>
+              </div>
 
-              <!-- Advance Paid Deduction -->
-              ${advancePays.length ? `
-              <div class="bill-section-header" style="color:rgba(100,220,120,0.9);">💚 &nbsp;Advance Paid</div>
-              ${advancePays.map(p => `
-              <div class="bill-line-row">
-                <div class="bill-line-left">
-                  <div class="bill-line-title" style="color:rgba(100,220,120,0.9);">${p.description}</div>
-                  <div class="bill-line-meta">${fmtPaidAt(p.paidAt)} · ${p.method}</div>
-                </div>
-                <div class="bill-line-right">
-                  <span class="bill-amount" style="color:rgba(100,220,120,0.9);">-${GM.fmt.currency(Math.abs(p.amount))}</span>
-                  <span class="bill-paid-badge" style="background:rgba(100,220,120,0.15);color:rgba(100,220,120,0.9);">✓ DEDUCTED</span>
-                </div>
-              </div>`).join('')}` : ''}
+              <div class="rb-divider-full"></div>
 
-              <!-- Adjustments Container (reflected on card) -->
-              <div id="bill-adjustments-card">
-                <div class="bill-section-header">⚖ &nbsp;Adjustments</div>
-                <div id="bill-extra-lines" style="border-bottom: 1px dashed rgba(255,255,255,0.1); margin-bottom: 0.5rem; padding-bottom: 0.5rem;">
-                  <div class="bill-empty-row">No manual adjustments</div>
+              <!-- FOOD ORDERS SECTION -->
+              ${bookingOrders.length ? `
+                <div class="rb-section-label">🍽 FOOD ORDERS</div>
+                ${bookingOrders.map(ord => {
+      const isPaid = ord.paymentStatus === 'paid';
+      const itemsDesc = ord.items.map(i => `${i.name} ×${i.qty}`).join(', ');
+      return `
+                  <div class="rb-row">
+                    <div class="rb-row-left">
+                      <span class="rb-row-title">Order #${ord.id.slice(0, 6)}: ${itemsDesc}</span>
+                      <span class="rb-row-meta">${GM.fmt.date(ord.createdAt)}</span>
+                    </div>
+                    <div class="rb-row-right">
+                      <span class="rb-row-amount">${GM.fmt.currency(ord.total)}</span>
+                      <span class="rb-paid-tag ${isPaid ? '' : 'rb-unpaid-tag'}">${isPaid ? '✓ PAID' : '🔴 UNPAID'}</span>
+                    </div>
+                  </div>`;
+    }).join('')}` : ''}
+
+              <div class="rb-divider-full"></div>
+
+              <!-- EVENTS SECTION -->
+              ${eventPays.length ? (function () {
+        const total = eventPays.reduce((s, p) => s + p.amount, 0);
+        const desc = eventPays.map(p => {
+          let d = p.description || '';
+          d = d.replace(/^Event:\s*/i, '');
+          d = d.split('—')[0].trim();
+          return d;
+        }).join(', ');
+
+        return `
+                  <div class="rb-section-label">🎉 EVENTS</div>
+                  <div class="rb-row">
+                    <div class="rb-row-left">
+                      <span class="rb-row-title">Events: ${desc}</span>
+                    </div>
+                    <div class="rb-row-right">
+                      <span class="rb-row-amount">${GM.fmt.currency(total)}</span>
+                      <span class="rb-paid-tag">✓ PAID</span>
+                    </div>
+                  </div>`;
+      })() : ''}
+
+              <div class="rb-divider-full"></div>
+
+              <!-- ADJUSTMENTS SECTION -->
+              <div id="rb-adjustments-section" style="display:none;">
+                <div class="rb-section-label">⚖ ADJUSTMENTS</div>
+                <div id="bill-extra-lines"></div>
+                <div class="rb-row" id="rb-discount-row" style="display:none;">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">Overall Discount</span>
+                  </div>
+                  <span class="rb-row-amount">- ₹<span id="discount-val">0</span></span>
                 </div>
+                <div class="rb-divider-full"></div>
+              </div>
+
+              <div class="rb-divider-full"></div>
+
+              <!-- TOTALS SECTION -->
+              <div class="rb-section-label">💳 PAYMENT SUMMARY</div>
+              <div class="rb-row">
+                <div class="rb-row-left">
+                  <span class="rb-row-title">Gross Total</span>
+                </div>
+                <span class="rb-row-amount" id="gross-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</span>
+              </div>
+
+              <div id="rb-deductions-list">
+                <div class="rb-row" id="rb-summary-services" style="border-bottom:none; display:none;">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">Services Settlement</span>
+                  </div>
+                  <span class="rb-row-amount" id="summary-services-amt" style="color:#666;"></span>
+                </div>
+
+                <div class="rb-row" id="rb-summary-advance" style="border-bottom:none; ${advanceTotal > 0 ? '' : 'display:none;'}">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">Advance Deposit</span>
+                  </div>
+                  <span class="rb-row-amount" id="summary-advance-amt" style="color:#166534;">-${GM.fmt.currency(advanceTotal)}</span>
+                </div>
+
+                <div class="rb-row" id="rb-summary-checkin" style="border-bottom:none; ${roomPaymentsTotal > 0 ? '' : 'display:none;'}">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">Check-in Deposit</span>
+                  </div>
+                  <span class="rb-row-amount" id="summary-checkin-amt" style="color:#166534;">-${GM.fmt.currency(roomPaymentsTotal)}</span>
+                </div>
+              </div>
+
+              <div class="rb-total-row" style="border-top: 1px dashed #e0e0e0; margin-top: 0.5rem;">
+                <span class="rb-total-label">Net Payable Amount</span>
+                <span class="rb-total-amount" id="grand-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal))}</span>
               </div>
               
-              <div class="extra-charges-section animate-in" style="margin-top:2rem;">
-                <h4 style="margin-bottom:1rem;color:var(--gold-bright);">Add Service / Correction</h4>
-                <div class="ec-entry-row mb-md">
-                  <div class="ec-field">
-                    <label>Service Name</label>
-                    <input type="text" id="ec-name" placeholder="e.g. Laundry, Bar, Pet Fee" class="form-input">
-                  </div>
-                  <div class="ec-field" style="flex:0;min-width:120px;">
-                    <label>Amount</label>
-                    <input type="number" id="ec-amount" placeholder="0" class="form-input">
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button class="btn btn--secondary" id="ec-add-paid" title="Add as Paid (Adds to total bill)" style="padding-left:1.5rem;padding-right:1.5rem;">+ Add Paid</button>
-                    <button class="btn btn--ghost" id="ec-add-due" title="Add as Due (Increases balance)">Add Due</button>
-                  </div>
-                </div>
-                
-                <h5 style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;">Recently Added</h5>
-                <div id="ec-list" class="ec-list" style="margin-top:0;padding-top:0;border:none;"></div>
-                <input type="hidden" id="extra-charges" value="0">
+              <div id="net-room-balance" style="display:none;"></div>
+
+              <div class="rb-divider-full"></div>
+
+              <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
+                <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
+                <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</div>
               </div>
 
-              <div class="bill-adjustment-row" style="padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.05);">
-                <span style="font-size:1rem;font-weight:500;">Apply Overall Discount</span>
-                <div>
-                  <input type="number" id="discount" value="0" min="0" placeholder="0" class="form-input" style="width:120px;text-align:right;">
-                  <span class="print-value">₹<span id="discount-val">0</span></span>
-                </div>
+              <div class="rb-divider-full"></div>
+
+              <div class="rb-balance-row" id="balance-row">
+                <span class="rb-balance-label">Balance Due Now</span>
+                <span class="rb-balance-amount" id="balance-due-display">₹0</span>
               </div>
 
-              <!-- Totals -->
-              <div class="bill-total-section">
-                <div class="bill-total-row">
-                  <span>Gross Total (Charges + Paid Services)</span>
-                  <span id="gross-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</span>
-                </div>
-                <div class="bill-total-row" style="color:var(--text-muted);font-size:0.85rem;">
-                  <span>Paid Services (Food/Events/Extra)</span>
-                  <span>-${GM.fmt.currency(servicesTotal)}</span>
-                </div>
-                ${advanceTotal > 0 ? `
-                <div class="bill-total-row" style="color:rgba(100,220,120,0.9);">
-                  <span>Advance Payment (Room)</span>
-                  <span>-${GM.fmt.currency(advanceTotal)}</span>
-                </div>` : ''}
-                <div class="bill-total-row" style="border-top:1px dashed rgba(255,255,255,0.1);padding-top:0.5rem;margin-top:0.5rem;">
-                  <span style="font-weight:600;">Net Room Balance</span>
-                  <span style="font-weight:600;">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal))}</span>
-                </div>
-                <div class="bill-grand-total">
-                  <span>Final Amount to Pay</span>
-                  <span id="grand-total-display">${GM.fmt.currency(roomChargeTotal - advanceTotal)}</span>
-                </div>
-                <div class="bill-adjustment-row" style="padding:0.75rem 0;border-top:1px dashed rgba(255,255,255,0.1);">
-                  <span style="font-size:1rem;font-weight:500;color:rgba(100,220,120,0.9);">💵 Pay Balanced Due</span>
-                  <div>
-                    <input type="number" id="paid-now" value="0" min="0" placeholder="0" class="form-input" style="width:130px;text-align:right;">
-                  </div>
-                </div>
-                <div class="bill-balance" id="balance-row">
-                  <span>Remaining Due</span>
-                  <span id="balance-due-display">₹0</span>
-                </div>
-              </div>
+              <div class="rb-divider-full"></div>
 
-              <!-- Footer -->
-              <div class="bill-footer-bar">
+              <!-- FOOTER -->
+              <div class="rb-footer">
                 <span>Bill No: <strong>${billNo}</strong></span>
                 <span>Generated: ${generatedAt}</span>
               </div>
 
-            </div><!-- end bill-card -->
+            </div><!-- end receipt-bill -->
           </div><!-- end bill-print-area -->
+
+          <!-- Interactive Controls (Outside Print Area) -->
+          <div class="extra-charges-section animate-in" style="max-width:680px; margin: 2rem auto;">
+            <h4 style="margin-bottom:1rem;color:var(--gold-bright);">Add Service / Correction</h4>
+            <div class="ec-entry-row mb-md">
+              <div class="ec-field">
+                <label>Service Name</label>
+                <input type="text" id="ec-name" placeholder="e.g. Laundry, Bar, Pet Fee" class="form-input">
+              </div>
+              <div class="ec-field" style="flex:0;min-width:120px;">
+                <label>Amount</label>
+                <input type="number" id="ec-amount" placeholder="0" class="form-input">
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn--secondary" id="ec-add-paid" title="Add as Paid (Adds to total bill)" style="padding-left:1.5rem;padding-right:1.5rem;">+ Add Paid</button>
+                <button class="btn btn--ghost" id="ec-add-due" title="Add as Due (Increases balance)">Add Due</button>
+              </div>
+            </div>
+            
+            <h5 style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;">Recently Added</h5>
+            <div id="ec-list" class="ec-list" style="margin-top:0;padding-top:0;border:none;"></div>
+            <input type="hidden" id="extra-charges" value="0">
+            
+            <hr style="border:none; border-top:1px dashed rgba(255,255,255,0.1); margin:1.5rem 0;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <span style="font-size:1rem;font-weight:500;">Apply Overall Discount</span>
+              <input type="number" id="discount" value="0" min="0" placeholder="0" class="form-input" style="width:120px;text-align:right;">
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:1rem;font-weight:500;color:rgba(100,220,120,0.9);">💵 Pay Balanced Due</span>
+              <input type="number" id="paid-now" value="0" min="0" placeholder="0" class="form-input" style="width:130px;text-align:right;">
+            </div>
+          </div>
 
           <!-- Action buttons -->
           <div id="bill-actions" class="bill-actions" style="max-width:720px;margin:1.25rem auto 0;display:flex;gap:1rem;flex-wrap:wrap;">
@@ -414,15 +468,18 @@
       `).join('');
 
       if (addedCharges.length === 0) {
-        billLinesEl.innerHTML = '<div class="bill-empty-row">No manual adjustments</div>';
+        billLinesEl.innerHTML = '';
       } else {
         billLinesEl.innerHTML = addedCharges.map(c => `
-          <div class="bill-extra-item">
-            <span>
-              ${c.name}
-              <span class="badge badge--tiny ${c.isPaid ? 'badge--success' : 'badge--warning'}">${c.isPaid ? 'PAID' : 'DUE'}</span>
-            </span>
-            <span style="font-weight:500;">${GM.fmt.currency(c.amount)}</span>
+          <div class="rb-row">
+            <div class="rb-row-left">
+              <span class="rb-row-title">${c.name}</span>
+              <span class="rb-row-meta">${c.isPaid ? 'Already Settle' : 'Charge to Room'}</span>
+            </div>
+            <div class="rb-row-right">
+              <span class="rb-row-amount">${GM.fmt.currency(c.amount)}</span>
+              ${c.isPaid ? '<span class="rb-paid-tag">✓ PAID</span>' : ''}
+            </div>
           </div>
         `).join('');
       }
@@ -454,18 +511,51 @@
     function calcBalance() {
       const disc = parseFloat(discountInput.value) || 0;
       if (discValEl) discValEl.textContent = disc;
+
       const totalExtra = addedCharges.reduce((s, c) => s + c.amount, 0);
+      const totalExtraPaid = addedCharges.filter(c => c.isPaid).reduce((s, c) => s + c.amount, 0);
       const totalExtraDue = addedCharges.filter(c => !c.isPaid).reduce((s, c) => s + c.amount, 0);
       const paidNow = parseFloat(document.getElementById('paid-now')?.value) || 0;
 
-      // Balance = (Room Charge - Already Paid Room/Advance) + Any extra dues - discount
-      const roomBal = Math.max(0, roomChargeTotal - roomPaymentsTotal - advanceTotal);
-      const currentNetTotal = roomBal + totalExtraDue - disc;
-      const balance = Math.max(0, currentNetTotal - paidNow);
+      // Update summary table real-time
+      // Gross = Room + All Food + Active Stay Events (usually already paid) + New Extra Paid
+      const currentGross = roomChargeTotal + totalFoodOrders + servicesTotal - foodPays.reduce((s, p) => s + p.amount, 0) + totalExtraPaid;
+      const grossEl = document.getElementById('gross-total-display');
+      if (grossEl) grossEl.textContent = GM.fmt.currency(currentGross);
+      
+      const overallTotalEl = document.getElementById('overall-total-display');
+      const overallDiscountedTotal = Math.max(0, currentGross - disc);
+      if (overallTotalEl) overallTotalEl.textContent = GM.fmt.currency(overallDiscountedTotal);
 
-      grandDisplay.textContent = GM.fmt.currency(currentNetTotal);
-      balanceEl.textContent = GM.fmt.currency(balance);
-      balanceRow.className = 'bill-balance' + (balance > 0 ? ' bill-balance--due' : '');
+      const srvAmtEl = document.getElementById('summary-services-amt');
+      // Services Settlement = Sum of all payments already made (excluding room and advance)
+      const totalSettled = servicesTotal + totalExtraPaid;
+      if (srvAmtEl) {
+        srvAmtEl.textContent = `-${GM.fmt.currency(totalSettled)}`;
+        const srvRow = document.getElementById('rb-summary-services');
+        if (srvRow) srvRow.style.display = totalSettled > 0 ? 'flex' : 'none';
+      }
+
+      const roomBal = Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal);
+      const netRoomEl = document.getElementById('net-room-balance');
+      if (netRoomEl) netRoomEl.textContent = GM.fmt.currency(roomBal);
+
+      // Unpaid food orders contribution
+      const unpaidFoodTotal = bookingOrders.filter(o => o.paymentStatus !== 'paid').reduce((s, o) => s + o.total, 0);
+
+      const currentNetTotal = Math.max(0, roomBal + unpaidFoodTotal + totalExtraDue - disc);
+      if (grandDisplay) grandDisplay.textContent = GM.fmt.currency(currentNetTotal);
+
+      // Visibility toggles for adjustments
+      const adjSection = document.getElementById('rb-adjustments-section');
+      if (adjSection) adjSection.style.display = (addedCharges.length > 0 || disc > 0) ? 'block' : 'none';
+      const discRow = document.getElementById('rb-discount-row');
+      if (discRow) discRow.style.display = disc > 0 ? 'flex' : 'none';
+
+      const balance = Math.max(0, currentNetTotal - paidNow);
+      if (balanceEl) balanceEl.textContent = GM.fmt.currency(balance);
+      if (balanceRow) balanceRow.className = 'rb-balance-row' + (balance > 0 ? ' rb-balance-row--due' : '');
+
       const hiddenEc = document.getElementById('extra-charges');
       if (hiddenEc) hiddenEc.value = totalExtra;
       return balance;

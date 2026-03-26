@@ -37,7 +37,8 @@
                 </div>
                 <div class="form-group" style="grid-column:1/-1;">
                   <label class="form-label" for="guestAadhaar">Aadhaar Number <span class="req">*</span></label>
-                  <input class="form-input" type="text" id="guestAadhaar" placeholder="XXXX XXXX XXXX" maxlength="14" required>
+                  <input class="form-input" type="text" id="guestAadhaar" placeholder="XXXX XXXX XXXX" maxlength="14" required list="guest-aadhaar-list">
+                  <datalist id="guest-aadhaar-list"></datalist>
                   <span class="form-error" id="guestAadhaar-err">Valid 12-digit Aadhaar required.</span>
                 </div>
               </div>
@@ -170,19 +171,35 @@
 
   // Aadhaar auto-format + returning guest auto-fetch
   const aadhaarInput = document.getElementById('guestAadhaar');
+  const aadhaarList = document.getElementById('guest-aadhaar-list');
+  let uploadedAadhaarUrl = '';
+
+  // Populate Aadhaar suggestions
+  function refreshAadhaarSuggestions() {
+    const uniqueAadhaars = [...new Set(MockData.guests.map(g => g.aadhaar).filter(a => !!a))];
+    aadhaarList.innerHTML = uniqueAadhaars.map(a => `<option value="${a}">`).join('');
+  }
+  refreshAadhaarSuggestions();
+
   let lastLookedUpAadhaar = '';
   aadhaarInput.addEventListener('input', () => {
     let v = aadhaarInput.value.replace(/\D/g, '').substring(0, 12);
-    aadhaarInput.value = v.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
 
-    // When all 12 digits are entered, look up returning guest
-    if (v.length === 12 && v !== lastLookedUpAadhaar) {
-      lastLookedUpAadhaar = v;
-      const formatted = v.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    // Auto-format only if not selecting from list
+    if (aadhaarInput.value.length <= 14) {
+      aadhaarInput.value = v.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    }
+
+    const cleanV = aadhaarInput.value.replace(/\s/g, '');
+
+    // Proactive lookup: if 12 digits OR exact match in cache
+    if (cleanV.length >= 4 && cleanV !== lastLookedUpAadhaar) {
       const guest = MockData.guests.find(g =>
-        g.aadhaar && g.aadhaar.replace(/\s/g, '') === v
+        g.aadhaar && g.aadhaar.replace(/\s/g, '') === cleanV
       );
+
       if (guest) {
+        lastLookedUpAadhaar = cleanV;
         // Auto-fill guest details
         const fields = {
           guestName: guest.name || '',
@@ -205,25 +222,59 @@
     }
   });
 
-  // Image previews
-  function setupPreview(inputId, previewId, imgId) {
+  // Image previews + Compression + Upload
+  function setupPreview(inputId, previewId, imgId, zoneId) {
     const input = document.getElementById(inputId);
     const preview = document.getElementById(previewId);
     const img = document.getElementById(imgId);
-    input.addEventListener('change', () => {
+    const zone = document.getElementById(zoneId);
+    const label = zone.querySelector('.upload-zone__label');
+
+    input.addEventListener('change', async () => {
       const file = input.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => { img.src = e.target.result; preview.classList.add('show'); };
-      reader.readAsDataURL(file);
+
+      const originalText = label.textContent;
+      label.innerHTML = `<span class="btn-spinner"></span> Compressing…`;
+      zone.style.opacity = '0.6';
+      zone.style.pointerEvents = 'none';
+
+      try {
+        // 1. Compress image to ~200KB
+        const compressedFile = await GM.compressImage(file, 200);
+        console.log(`Compressed from ${file.size / 1024}KB to ${compressedFile.size / 1024}KB`);
+
+        // 2. Show local preview
+        const reader = new FileReader();
+        reader.onload = e => { img.src = e.target.result; preview.classList.add('show'); };
+        reader.readAsDataURL(compressedFile);
+
+        // 3. Upload to Supabase Storage
+        label.innerHTML = `<span class="btn-spinner"></span> Uploading…`;
+        const url = await MockData.uploadGuestDocument(compressedFile, file.name);
+        uploadedAadhaarUrl = url;
+
+        label.innerHTML = `✅ Aadhaar Ready`;
+        GM.toast('Aadhaar verified and compressed!', 'success');
+      } catch (err) {
+        console.error('Upload error:', err);
+        label.textContent = originalText;
+        GM.toast('Could not upload image. Please try again.', 'error');
+      } finally {
+        zone.style.opacity = '1';
+        zone.style.pointerEvents = 'auto';
+      }
     });
   }
-  setupPreview('aadhaarImage', 'aadhaar-preview', 'aadhaar-preview-img');
+  setupPreview('aadhaarImage', 'aadhaar-preview', 'aadhaar-preview-img', 'aadhaar-zone');
 
   function clearPreviews() {
     document.getElementById('aadhaar-preview').classList.remove('show');
     document.getElementById('aadhaar-preview-img').src = '';
     document.getElementById('stay-summary').style.display = 'none';
+    const label = document.querySelector('#aadhaar-zone .upload-zone__label');
+    if (label) label.textContent = 'Click to upload Aadhaar';
+    uploadedAadhaarUrl = '';
   }
 
   document.getElementById('clear-form-btn').addEventListener('click', () => {
@@ -352,9 +403,16 @@
         if (existingGuest) {
           guest = existingGuest;
           // Update details in case anything changed
-          await MockData.updateGuest(guest.id, { name, phone, email, address, aadhaar });
+          await MockData.updateGuest(guest.id, {
+            name, phone, email, address, aadhaar,
+            aadhaarUrl: uploadedAadhaarUrl || guest.aadhaarUrl
+          });
         } else {
-          guest = await MockData.addGuest({ name, phone, email, address, aadhaar, totalStays: 0, lastStay: null });
+          guest = await MockData.addGuest({
+            name, phone, email, address, aadhaar,
+            aadhaarUrl: uploadedAadhaarUrl,
+            totalStays: 0, lastStay: null
+          });
         }
 
         // Find selected room info
@@ -379,6 +437,7 @@
         GM.toast('🎉 Booking created successfully!', 'success');
         document.getElementById('new-booking-form').reset();
         clearPreviews();
+        refreshAadhaarSuggestions(); // Update suggestions with the new guest
       } catch (err) {
         console.error('Booking submission error:', err);
         // Error toast already shown by MockData

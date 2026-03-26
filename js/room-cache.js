@@ -56,9 +56,18 @@ window.RoomCache = (function () {
 
     async function updateRoom(id, updatedObj) {
         try {
-            const dbUpdates = { ...updatedObj };
-            if (dbUpdates.base_price_per_night !== undefined) dbUpdates.base_price_per_night = Number(dbUpdates.base_price_per_night);
-            if (dbUpdates.capacity !== undefined) dbUpdates.capacity = Number(dbUpdates.capacity);
+            // Filter payload to only allowed columns
+            const allowed = ['room_number', 'room_type', 'floor', 'capacity', 'base_price_per_night', 'status', 'description'];
+            const dbUpdates = {};
+            allowed.forEach(key => {
+                if (updatedObj[key] !== undefined) {
+                    if (key === 'base_price_per_night' || key === 'capacity') {
+                        dbUpdates[key] = Number(updatedObj[key]);
+                    } else {
+                        dbUpdates[key] = updatedObj[key];
+                    }
+                }
+            });
 
             const { error } = await db().from('rooms').update(dbUpdates).eq('id', id);
             if (error) throw error;

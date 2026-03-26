@@ -9,8 +9,28 @@
       <p>Complete record of all past guest stays — click any row to view full bill</p>
     </div>
     <div class="page-content">
+      <div class="filter-bar animate-in" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1.5rem;">
+        <div class="search-wrap" style="flex:1;max-width:320px;">
+          <input class="form-input" type="search" id="history-search" placeholder="Search guests, rooms, phone…">
+        </div>
+        
+        <select class="form-input" id="month-filter" style="width:140px;">
+          <option value="">All Months</option>
+          <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        
+        <select class="form-input" id="year-filter" style="width:110px;">
+          <option value="">All Years</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+        
+        <button class="btn btn--ghost btn--sm" id="clear-history-filters">Reset</button>
       </div>
-      
       <!-- Tabs -->
       <div class="tabs animate-in" style="margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:2rem;">
         <button class="tab-btn active" id="tab-completed" style="background:none; border:none; color:var(--text-muted); padding:0.75rem 0.25rem; cursor:pointer; font-weight:500; position:relative;">Completed Stays</button>
@@ -133,7 +153,7 @@
             <div class="bill-section-header">🎉 &nbsp;Events</div>
             ${eventPays.length ? eventPays.map(lineRow).join('') : '<div class="bill-empty-row">None recorded</div>'}
 
-            <div class="bill-total-section">
+            <div class="rb-total-section">
               <div class="bill-grand-total">
                 <span>Grand Total Paid</span>
                 <span>${GM.fmt.currency(rec.grandTotal)}</span>
@@ -143,6 +163,15 @@
                 <span>₹0 (Fully Paid)</span>
               </div>
             </div>
+
+            <div class="rb-divider-full"></div>
+
+            <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
+              <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
+              <div style="font-size: 2.2rem; font-weight: 900; color: #000;">${GM.fmt.currency(rec.grandTotal)}</div>
+            </div>
+
+            <div class="rb-divider-full"></div>
 
             <div class="bill-footer-bar">
               <span>Bill No: <strong>${rec.billNo || rec.id || '—'}</strong></span>
