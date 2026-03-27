@@ -117,7 +117,7 @@
 }
 .emp-table-head {
   display: grid;
-  grid-template-columns: 2fr 2fr 1.2fr 1.2fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr;
   padding: 0.75rem 1.25rem;
   background: rgba(255,255,255,0.03);
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -127,7 +127,7 @@
 }
 .emp-row {
   display: grid;
-  grid-template-columns: 2fr 2fr 1.2fr 1.2fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr;
   padding: 1rem 1.25rem; gap: 0.5rem;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   align-items: center;
@@ -151,6 +151,7 @@
 }
 .emp-badge--active { background: rgba(42,191,176,0.15); color: #2abfb0; }
 .emp-badge--invited { background: rgba(212,168,83,0.12); color: #D4A853; }
+.emp-badge--role { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); text-transform: capitalize; }
 .emp-date { font-size: 0.78rem; color: rgba(255,255,255,0.35); }
 .emp-actions { display: flex; justify-content: flex-end; }
 .btn-revoke {
@@ -192,7 +193,7 @@
   async function loadEmployees() {
     const { data, error } = await sb.from('profiles')
       .select('*')
-      .eq('role', 'employee')
+      .in('role', ['employee', 'manager'])
       .order('created_at', { ascending: false });
     if (error) { console.error('profiles fetch error:', error); return []; }
     return data || [];
@@ -217,6 +218,9 @@
           <span class="emp-name">${emp.name || '—'}</span>
         </div>
         <div class="emp-email-cell">${emp.email || '—'}</div>
+        <div>
+          <span class="emp-badge emp-badge--role">${emp.role || 'employee'}</span>
+        </div>
         <div>
           <span class="emp-badge emp-badge--active">● Active</span>
         </div>
@@ -272,9 +276,15 @@
             <label for="emp-pass-inp">Temporary Password</label>
             <input type="password" id="emp-pass-inp" placeholder="Min 6 characters" autocomplete="new-password">
           </div>
+          <div class="emp-form-field">
+            <label for="emp-role-inp">Access Level / Role</label>
+            <select id="emp-role-inp" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 0.7rem 1rem; color: #fff; font-size: 0.9rem; font-family: inherit; transition: border 0.2s; outline:none;">
+              <option value="employee" style="background:#1a1d2b;">Employee (Standard Access)</option>
+              <option value="manager" style="background:#1a1d2b;">Manager (Full Operations Access)</option>
+            </select>
+          </div>
           <div style="background:rgba(212,168,83,0.08);border:1px solid rgba(212,168,83,0.2);border-radius:8px;padding:0.75rem 1rem;font-size:0.78rem;color:rgba(255,255,255,0.5);line-height:1.5;">
-            ℹ️ The employee will receive a <b style="color:rgba(255,255,255,0.7);">confirmation email</b> and can log in with the credentials you set.
-            They can <b style="color:#2abfb0;">add records</b> but cannot <b style="color:#ff8080;">edit or delete</b> anything.
+            ℹ️ <b style="color:rgba(255,255,255,0.7);">Managers</b> can check-in guests and edit bookings. <b style="color:rgba(255,255,255,0.7);">Employees</b> can only add new records.
           </div>
         </div>
         <div class="emp-modal-footer">
@@ -302,6 +312,7 @@
     const name = document.getElementById('emp-name-inp').value.trim();
     const email = document.getElementById('emp-email-inp').value.trim();
     const pass = document.getElementById('emp-pass-inp').value;
+    const role = document.getElementById('emp-role-inp').value;
     const btn = document.getElementById('emp-submit-btn');
 
     if (!name) { GM.toast('Please enter the employee name', 'error'); return; }
@@ -325,7 +336,7 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`
           },
-          body: JSON.stringify({ name, email, password: pass })
+          body: JSON.stringify({ name, email, password: pass, role })
         }
       );
 
@@ -366,6 +377,7 @@
           <div class="emp-table-head">
             <div>Name</div>
             <div>Email</div>
+            <div>Role</div>
             <div>Status</div>
             <div>Added On</div>
             <div style="text-align:right;">Action</div>

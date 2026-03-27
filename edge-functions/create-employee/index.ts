@@ -48,13 +48,22 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        const { name, email, password } = await req.json();
+        const { name, email, password, role = 'employee' } = await req.json();
         if (!name || !email || !password) {
             return new Response(JSON.stringify({ error: "name, email and password are required" }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
+
+        // Validate role
+        if (!['employee', 'manager'].includes(role)) {
+            return new Response(JSON.stringify({ error: "Invalid role. Must be 'employee' or 'manager'" }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
         if (password.length < 6) {
             return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
                 status: 400,
@@ -69,7 +78,7 @@ Deno.serve(async (req: Request) => {
             email,
             password,
             email_confirm: false, // Wait for verification
-            user_metadata: { name, role: 'employee' },
+            user_metadata: { name, role },
         });
 
         if (createErr) {
@@ -88,7 +97,7 @@ Deno.serve(async (req: Request) => {
                 id: newUser.id,
                 email: newUser.email,
                 name,
-                role: "employee",
+                role: role,
             });
 
         if (profileInsertErr) {

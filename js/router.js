@@ -13,20 +13,19 @@
     /* Expose role globally so all page modules + nav can read it */
     window.GMRole = (session.role || 'admin').toLowerCase();
 
-    /* Helper: true if current user is an employee/manager (not admin/owner) */
-    window.GMIsManager = () => window.GMRole === 'employee';
-
-    /* Simple boolean — set once at startup, used in template literals across all page modules */
-    window.GMIsAdmin = window.GMRole !== 'employee';
+    /* Helper roles */
+    window.GMIsAdmin = window.GMRole === 'admin';
+    window.GMIsManager = window.GMRole === 'manager';
+    window.GMIsEmployee = window.GMRole === 'employee';
 
     // Rebuild nav now that we know the user's role (hides admin-only items for employees)
     if (window.GMNav && window.GMNav.buildNav) {
         window.GMNav.buildNav();
     }
 
-    /* Permission helpers — employees/managers cannot edit or delete */
+    /* Permission helpers — Managers can edit, but only Admins can delete */
     window.GMCan = {
-        edit: () => window.GMIsAdmin,
+        edit: () => window.GMIsAdmin || window.GMIsManager,
         delete: () => window.GMIsAdmin,
     };
 
@@ -35,11 +34,11 @@
     const roleEl = document.getElementById('header-role');
     const avatarEl = document.getElementById('header-avatar');
     if (nameEl) nameEl.textContent = session.name || 'Admin';
-    /* Show human-friendly role label: employee → Manager, anything else → Admin */
-    if (roleEl) roleEl.textContent = window.GMIsManager() ? 'Manager' : 'Admin';
+    /* Show actual role label: capitalize for UI */
+    if (roleEl) roleEl.textContent = window.GMRole.charAt(0).toUpperCase() + window.GMRole.slice(1);
     const brandTagEl = document.getElementById('brand-tag');
-    if (brandTagEl) brandTagEl.textContent = `KODAIKANAL · ${window.GMIsManager() ? 'MANAGER' : 'ADMIN'}`;
-    document.title = `The Grand Mist — ${window.GMIsManager() ? 'Manager' : 'Admin'}`;
+    if (brandTagEl) brandTagEl.textContent = `KODAIKANAL · ${window.GMRole.toUpperCase()}`;
+    document.title = `The Grand Mist — ${window.GMRole.charAt(0).toUpperCase() + window.GMRole.slice(1)}`;
     if (avatarEl) avatarEl.textContent = (session.name || 'A').charAt(0).toUpperCase();
 
     /* ── LOGOUT ─────────────────────────────────────────────── */
