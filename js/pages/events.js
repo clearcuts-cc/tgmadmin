@@ -268,10 +268,11 @@
     <div class="page-header animate-in">
       <div style="display:flex;align-items:center;gap:1rem;">
         <button onclick="window.__gmRenderEventsList()" class="btn btn--ghost btn--sm">← Back to Events</button>
-        <div>
+        <div style="flex:1;">
           <h1>${event.name}</h1>
           <p>${GM.fmt.date(event.date)} · ${event.time} · ₹${event.price}/person · Max ${event.maxCapacity} guests</p>
         </div>
+        ${window.GMIsAdmin ? `<button onclick="window.__gmEditFromDetail('${event.id}')" class="btn btn--ghost btn--sm">✏ Edit Event</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -455,7 +456,13 @@
       delete window.__gmViewEvent;
       delete window.__gmRenderEventsList;
       delete window.GMEvRegRemove;
+      delete window.__gmEditFromDetail;
     };
+  };
+
+  window.__gmEditFromDetail = function(eventId) {
+    window.__gmRenderEventsList();
+    if (window.GMEvEdit) window.GMEvEdit(eventId);
   };
 
   window.__gmRenderEventsList = renderEventsList;
@@ -467,5 +474,6 @@
     delete window.__gmRenderEventsList;
     delete window.GMEvEdit;
     delete window.GMEvDelete;
+    delete window.__gmEditFromDetail;
   };
 })();

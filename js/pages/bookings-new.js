@@ -49,12 +49,12 @@
               <div class="form-group">
                   <label class="form-label">Aadhaar Card Image</label>
                   <div class="upload-zone" id="aadhaar-zone">
-                    <input type="file" id="aadhaarImage" accept="image/*">
+                    <input type="file" id="aadhaarImage" accept="image/*" multiple>
                     <div class="upload-zone__icon">🪪</div>
                     <div class="upload-zone__label">Click to upload Aadhaar</div>
                     <div class="upload-zone__sub">JPG, PNG or PDF · Max 5 MB</div>
                   </div>
-                  <div class="upload-preview" id="aadhaar-preview"><img id="aadhaar-preview-img" src="" alt="Aadhaar preview"></div>
+                  <div class="upload-preview" id="aadhaar-preview" style="display:none; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;"></div>
               </div>
             </div>
 
@@ -223,39 +223,56 @@
   });
 
   // Image previews + Compression + Upload
-  function setupPreview(inputId, previewId, imgId, zoneId) {
+  function setupPreview(inputId, previewId, zoneId) {
     const input = document.getElementById(inputId);
     const preview = document.getElementById(previewId);
-    const img = document.getElementById(imgId);
     const zone = document.getElementById(zoneId);
     const label = zone.querySelector('.upload-zone__label');
 
     input.addEventListener('change', async () => {
-      const file = input.files[0];
-      if (!file) return;
+      const files = Array.from(input.files);
+      if (!files.length) return;
 
       const originalText = label.textContent;
-      label.innerHTML = `<span class="btn-spinner"></span> Compressing…`;
+      label.innerHTML = `<span class="btn-spinner"></span> Processing ${files.length} file(s)…`;
       zone.style.opacity = '0.6';
       zone.style.pointerEvents = 'none';
 
       try {
-        // 1. Compress image to ~200KB
-        const compressedFile = await GM.compressImage(file, 200);
-        console.log(`Compressed from ${file.size / 1024}KB to ${compressedFile.size / 1024}KB`);
+        const urls = [];
+        preview.innerHTML = ''; // clear preview container
 
-        // 2. Show local preview
-        const reader = new FileReader();
-        reader.onload = e => { img.src = e.target.result; preview.classList.add('show'); };
-        reader.readAsDataURL(compressedFile);
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          label.innerHTML = `<span class="btn-spinner"></span> Compressing ${i+1}/${files.length}…`;
+          const compressedFile = await GM.compressImage(file, 200);
+          console.log(`Compressed from ${file.size / 1024}KB to ${compressedFile.size / 1024}KB`);
 
-        // 3. Upload to Supabase Storage
-        label.innerHTML = `<span class="btn-spinner"></span> Uploading…`;
-        const url = await MockData.uploadGuestDocument(compressedFile, file.name);
-        uploadedAadhaarUrl = url;
+          // Show local preview immediately
+          const reader = new FileReader();
+          reader.onload = e => {
+             const imgEl = document.createElement('img');
+             imgEl.src = e.target.result;
+             imgEl.style.width = '64px';
+             imgEl.style.height = '64px';
+             imgEl.style.objectFit = 'cover';
+             imgEl.style.borderRadius = '6px';
+             imgEl.style.border = '1px solid var(--border)';
+             preview.appendChild(imgEl);
+          };
+          reader.readAsDataURL(compressedFile);
 
-        label.innerHTML = `✅ Aadhaar Ready`;
-        GM.toast('Aadhaar verified and compressed!', 'success');
+          label.innerHTML = `<span class="btn-spinner"></span> Uploading ${i+1}/${files.length}…`;
+          const url = await MockData.uploadGuestDocument(compressedFile, file.name);
+          urls.push(url);
+        }
+
+        uploadedAadhaarUrl = urls.join(',');
+        preview.classList.add('show');
+        preview.style.display = 'flex';
+
+        label.innerHTML = `✅ ${files.length} Document(s) Ready`;
+        GM.toast(`All ${files.length} documents uploaded!`, 'success');
       } catch (err) {
         console.error('Upload error:', err);
         label.textContent = originalText;
@@ -266,11 +283,12 @@
       }
     });
   }
-  setupPreview('aadhaarImage', 'aadhaar-preview', 'aadhaar-preview-img', 'aadhaar-zone');
+  setupPreview('aadhaarImage', 'aadhaar-preview', 'aadhaar-zone');
 
   function clearPreviews() {
     document.getElementById('aadhaar-preview').classList.remove('show');
-    document.getElementById('aadhaar-preview-img').src = '';
+    document.getElementById('aadhaar-preview').style.display = 'none';
+    document.getElementById('aadhaar-preview').innerHTML = '';
     document.getElementById('stay-summary').style.display = 'none';
     const label = document.querySelector('#aadhaar-zone .upload-zone__label');
     if (label) label.textContent = 'Click to upload Aadhaar';
