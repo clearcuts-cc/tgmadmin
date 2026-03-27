@@ -136,16 +136,11 @@ body {
 .auth-logo-mark {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, var(--gold-mid), var(--gold-bright));
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--bg-base);
     margin: 0 auto 1rem;
-    box-shadow: 0 8px 32px rgba(212, 168, 83, 0.35);
 }
 
 .auth-logo h1 {

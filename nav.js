@@ -56,7 +56,7 @@ function injectNav(activePage) {
         <span></span><span></span><span></span>
       </button>
       <a href="dashboard.html" class="header__logo">
-        <div class="header__logo-mark">GM</div>
+        <div class="header__logo-mark"><img src="assets/logo.png" alt="GM" style="width:100%; height:100%; object-fit:contain;"></div>
         <div class="header__logo-text">
           The Grand Mist
           <span class="header__logo-sub">Kodaikanal · Admin</span>

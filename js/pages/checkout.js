@@ -202,7 +202,8 @@
             <div class="receipt-bill animate-in">
 
               <!-- HEADER -->
-              <div class="rb-header">
+              <div class="rb-header" style="text-align: center;">
+                <img src="assets/logo.png" alt="Logo" style="max-width: 64px; max-height: 64px; margin: 0 auto 0.5rem auto; display: block; object-fit: contain;">
                 <h1 class="rb-resort-name">${s.resortName || 'THE GRAND MIST'}</h1>
                 <p class="rb-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
               </div>
