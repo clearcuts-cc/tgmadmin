@@ -46,15 +46,25 @@
 
             <div class="card mb-md">
               <h3 style="margin-bottom:1rem;">📎 Documents</h3>
-              <div class="form-group">
-                  <label class="form-label">Aadhaar Card Image</label>
-                  <div class="upload-zone" id="aadhaar-zone">
-                    <input type="file" id="aadhaarImage" accept="image/*" multiple>
-                    <div class="upload-zone__icon">🪪</div>
-                    <div class="upload-zone__label">Click to upload Aadhaar</div>
-                    <div class="upload-zone__sub">JPG, PNG or PDF · Max 5 MB</div>
-                  </div>
-                  <div class="upload-preview" id="aadhaar-preview" style="display:none; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;"></div>
+              <div class="form-grid form-grid--2">
+                <div class="form-group">
+                    <label class="form-label">Aadhaar Front Image</label>
+                    <div class="upload-zone" id="aadhaar-front-zone">
+                      <input type="file" id="aadhaarFrontImage" accept="image/*">
+                      <div class="upload-zone__icon">🪪</div>
+                      <div class="upload-zone__label" style="font-size:0.8rem">Click to upload Front</div>
+                    </div>
+                    <div class="upload-preview" id="aadhaar-front-preview" style="display:none; margin-top:0.5rem;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Aadhaar Back Image</label>
+                    <div class="upload-zone" id="aadhaar-back-zone">
+                      <input type="file" id="aadhaarBackImage" accept="image/*">
+                      <div class="upload-zone__icon">🪪</div>
+                      <div class="upload-zone__label" style="font-size:0.8rem">Click to upload Back</div>
+                    </div>
+                    <div class="upload-preview" id="aadhaar-back-preview" style="display:none; margin-top:0.5rem;"></div>
+                </div>
               </div>
             </div>
 
@@ -172,7 +182,8 @@
   // Aadhaar auto-format + returning guest auto-fetch
   const aadhaarInput = document.getElementById('guestAadhaar');
   const aadhaarList = document.getElementById('guest-aadhaar-list');
-  let uploadedAadhaarUrl = '';
+  let uploadedAadhaarFrontUrl = '';
+  let uploadedAadhaarBackUrl = '';
 
   // Populate Aadhaar suggestions
   function refreshAadhaarSuggestions() {
@@ -223,56 +234,49 @@
   });
 
   // Image previews + Compression + Upload
-  function setupPreview(inputId, previewId, zoneId) {
+  function setupPreview(inputId, previewId, zoneId, onUploadSuccess) {
     const input = document.getElementById(inputId);
     const preview = document.getElementById(previewId);
     const zone = document.getElementById(zoneId);
     const label = zone.querySelector('.upload-zone__label');
 
     input.addEventListener('change', async () => {
-      const files = Array.from(input.files);
-      if (!files.length) return;
+      const file = input.files[0];
+      if (!file) return;
 
       const originalText = label.textContent;
-      label.innerHTML = `<span class="btn-spinner"></span> Processing ${files.length} file(s)…`;
+      label.innerHTML = `<span class="btn-spinner"></span> Compressing…`;
       zone.style.opacity = '0.6';
       zone.style.pointerEvents = 'none';
 
       try {
-        const urls = [];
         preview.innerHTML = ''; // clear preview container
 
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          label.innerHTML = `<span class="btn-spinner"></span> Compressing ${i+1}/${files.length}…`;
-          const compressedFile = await GM.compressImage(file, 200);
-          console.log(`Compressed from ${file.size / 1024}KB to ${compressedFile.size / 1024}KB`);
+        const compressedFile = await GM.compressImage(file, 200);
 
-          // Show local preview immediately
-          const reader = new FileReader();
-          reader.onload = e => {
-             const imgEl = document.createElement('img');
-             imgEl.src = e.target.result;
-             imgEl.style.width = '64px';
-             imgEl.style.height = '64px';
-             imgEl.style.objectFit = 'cover';
-             imgEl.style.borderRadius = '6px';
-             imgEl.style.border = '1px solid var(--border)';
-             preview.appendChild(imgEl);
-          };
-          reader.readAsDataURL(compressedFile);
+        // Show local preview immediately
+        const reader = new FileReader();
+        reader.onload = e => {
+           const imgEl = document.createElement('img');
+           imgEl.src = e.target.result;
+           imgEl.style.width = '100%';
+           imgEl.style.height = '100px';
+           imgEl.style.objectFit = 'cover';
+           imgEl.style.borderRadius = '6px';
+           imgEl.style.border = '1px solid var(--border)';
+           preview.appendChild(imgEl);
+        };
+        reader.readAsDataURL(compressedFile);
 
-          label.innerHTML = `<span class="btn-spinner"></span> Uploading ${i+1}/${files.length}…`;
-          const url = await MockData.uploadGuestDocument(compressedFile, file.name);
-          urls.push(url);
-        }
+        label.innerHTML = `<span class="btn-spinner"></span> Uploading…`;
+        const url = await MockData.uploadGuestDocument(compressedFile, file.name);
 
-        uploadedAadhaarUrl = urls.join(',');
+        onUploadSuccess(url);
         preview.classList.add('show');
-        preview.style.display = 'flex';
+        preview.style.display = 'block';
 
-        label.innerHTML = `✅ ${files.length} Document(s) Ready`;
-        GM.toast(`All ${files.length} documents uploaded!`, 'success');
+        label.innerHTML = `✅ Ready`;
+        GM.toast(`Document uploaded successfully!`, 'success');
       } catch (err) {
         console.error('Upload error:', err);
         label.textContent = originalText;
@@ -283,16 +287,19 @@
       }
     });
   }
-  setupPreview('aadhaarImage', 'aadhaar-preview', 'aadhaar-zone');
+  setupPreview('aadhaarFrontImage', 'aadhaar-front-preview', 'aadhaar-front-zone', url => uploadedAadhaarFrontUrl = url);
+  setupPreview('aadhaarBackImage', 'aadhaar-back-preview', 'aadhaar-back-zone', url => uploadedAadhaarBackUrl = url);
 
   function clearPreviews() {
-    document.getElementById('aadhaar-preview').classList.remove('show');
-    document.getElementById('aadhaar-preview').style.display = 'none';
-    document.getElementById('aadhaar-preview').innerHTML = '';
+    ['front', 'back'].forEach(side => {
+      const p = document.getElementById(`aadhaar-${side}-preview`);
+      if (p) { p.classList.remove('show'); p.style.display = 'none'; p.innerHTML = ''; }
+      const label = document.querySelector(`#aadhaar-${side}-zone .upload-zone__label`);
+      if (label) label.textContent = `Click to upload ${side.charAt(0).toUpperCase() + side.slice(1)}`;
+    });
     document.getElementById('stay-summary').style.display = 'none';
-    const label = document.querySelector('#aadhaar-zone .upload-zone__label');
-    if (label) label.textContent = 'Click to upload Aadhaar';
-    uploadedAadhaarUrl = '';
+    uploadedAadhaarFrontUrl = '';
+    uploadedAadhaarBackUrl = '';
   }
 
   document.getElementById('clear-form-btn').addEventListener('click', () => {
@@ -412,6 +419,8 @@
         ? (parseFloat(document.getElementById('advanceAmount').value) || 0) : 0;
 
       try {
+        const finalUrl = [uploadedAadhaarFrontUrl, uploadedAadhaarBackUrl].filter(Boolean).join(',');
+
         // Find or create guest (match by Aadhaar first, then phone)
         const aadhaarClean = aadhaar.replace(/\s/g, '');
         const existingGuest = MockData.guests.find(g =>
@@ -423,12 +432,12 @@
           // Update details in case anything changed
           await MockData.updateGuest(guest.id, {
             name, phone, email, address, aadhaar,
-            aadhaarUrl: uploadedAadhaarUrl || guest.aadhaarUrl
+            aadhaarUrl: finalUrl || guest.aadhaarUrl
           });
         } else {
           guest = await MockData.addGuest({
             name, phone, email, address, aadhaar,
-            aadhaarUrl: uploadedAadhaarUrl,
+            aadhaarUrl: finalUrl,
             totalStays: 0, lastStay: null
           });
         }
