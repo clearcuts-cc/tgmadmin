@@ -31,7 +31,7 @@ $Body = @{
         }
     )
     entrypoint_path = "index.ts"
-    verify_jwt = $true
+    verify_jwt = $false
 } | ConvertTo-Json -Depth 5
 
 $Url = "https://api.supabase.com/v1/projects/$ProjectRef/functions/$FunctionName"

@@ -358,10 +358,6 @@
               <div class="stat-num" id="emp-stat-total">—</div>
               <div class="stat-label">Total Employees</div>
             </div>
-            <div class="emp-stat-card">
-              <div class="stat-num" style="color:#2abfb0;">Add Only</div>
-              <div class="stat-label">Employee Permission</div>
-            </div>
           </div>
           <button class="btn btn--primary" id="emp-add-btn">＋ Add Employee</button>
         </div>
