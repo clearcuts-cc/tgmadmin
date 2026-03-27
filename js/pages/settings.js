@@ -16,6 +16,7 @@
     showPaymentMethod: true,
     roomGST: 12,
     foodGST: 5,
+    enableGST: true,
     billPrefix: 'GM-2026',
     billFooter: 'Thank you for staying at The Grand Mist!',
   };
@@ -427,6 +428,17 @@
           <div class="settings-grid">
 
             <div class="settings-field">
+              <label>Enable GST Calculations</label>
+              <div class="settings-toggle-row">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="enableGST" ${s.enableGST ? 'checked' : ''}>
+                  <span class="settings-toggle-track"></span>
+                </label>
+                <span class="settings-toggle-label">Turn ON to apply GST to bills, OFF to hide completely</span>
+              </div>
+            </div>
+
+            <div class="settings-field">
               <label>Show Payment Method on Bill</label>
               <div class="settings-toggle-row">
                 <label class="settings-toggle">
@@ -624,6 +636,7 @@
       showPaymentMethod: document.getElementById('showPaymentMethod').checked,
       roomGST: parseFloat(document.getElementById('roomGST').value) || 0,
       foodGST: parseFloat(document.getElementById('foodGST').value) || 0,
+      enableGST: document.getElementById('enableGST').checked,
       billPrefix: document.getElementById('billPrefix').value.trim(),
       billFooter: document.getElementById('billFooter').value.trim(),
     };

@@ -98,7 +98,11 @@
     }
 
     function buildBillHTML(rec) {
-      const pays = rec.payments || [];
+      const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+      let pays = rec.payments || [];
+      if (!enableGST) {
+        pays = pays.filter(p => !p.description.toLowerCase().includes('gst'));
+      }
       const roomPays = pays.filter(p => p.type === 'room');
       const foodPays = pays.filter(p => p.type === 'food');
       const eventPays = pays.filter(p => p.type === 'event');
@@ -120,9 +124,11 @@
       return `
         <div id="bill-print-area">
           <div class="bill-card">
-            <div class="bill-header">
-              <div class="bill-resort-name">The Grand Mist</div>
-              <div class="bill-resort-sub">KODAIKANAL, DINDIGUL &nbsp;·&nbsp; ★★★★</div>
+            <div class="bill-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem 1rem;">
+              <img src="assets/logo.png" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 0.75rem; display: block; object-fit: contain;">
+              <div class="bill-resort-name" style="margin:0; font-size: 1.5rem;">The Grand Mist</div>
+              <div class="bill-resort-sub" style="margin:0.25rem 0 0;">KODAIKANAL, DINDIGUL · ★★★★</div>
+              <div style="font-size:0.85rem; font-weight:600; color:#333; margin-top:0.5rem;">Contact: +91 9944033765</div>
             </div>
 
             <div class="bill-guest-info">
@@ -136,11 +142,11 @@
               </div>
               <div class="bill-guest-info-item">
                 <div class="bill-info-label">Check-in</div>
-                <div class="bill-info-value">${GM.fmt.date(rec.checkIn)}</div>
+                <div class="bill-info-value">${GM.fmt.date(rec.checkIn)} ${rec.checkInTime ? '@ ' + rec.checkInTime : ''}</div>
               </div>
               <div class="bill-guest-info-item">
                 <div class="bill-info-label">Check-out · Nights</div>
-                <div class="bill-info-value">${GM.fmt.date(rec.checkOut)} &nbsp;·&nbsp; ${rec.nights} nights</div>
+                <div class="bill-info-value">${GM.fmt.date(rec.checkOut)} ${rec.checkOutTime ? '@ ' + rec.checkOutTime : ''} &nbsp;·&nbsp; ${rec.nights} nights</div>
               </div>
             </div>
 
@@ -169,7 +175,8 @@
             <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
               <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
               <div style="font-size: 2.2rem; font-weight: 900; color: #000;">${GM.fmt.currency(rec.grandTotal)}</div>
-            </div>
+               <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #000; font-weight: 600;">Contact: +91 9944033765</div>
+             </div>
 
             <div class="rb-divider-full"></div>
 
@@ -214,18 +221,25 @@
       try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'mm', format: 'a5' });
-        const pays = activeBill.payments || [];
+        const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+        let pays = activeBill.payments || [];
+        if (!enableGST) {
+          pays = pays.filter(p => !p.description.toLowerCase().includes('gst'));
+        }
         let y = 15; const lm = 15, rw = 130;
 
         doc.setFontSize(14); doc.setFont('helvetica', 'bold');
         doc.text('THE GRAND MIST', 73, y, { align: 'center' }); y += 6;
         doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-        doc.text('Kodaikanal, Dindigul | ★★★★', 73, y, { align: 'center' }); y += 8;
+        doc.text('Kodaikanal, Dindigul | ★★★★', 73, y, { align: 'center' }); y += 4;
+        doc.setFontSize(7); doc.setTextColor(100);
+        doc.text('Contact: +91 9944033765', 73, y, { align: 'center' }); y += 4;
+        doc.setTextColor(0);
         doc.setDrawColor(180); doc.line(lm, y, lm + rw, y); y += 5;
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
         doc.text(`Guest: ${activeBill.guestName}   Room: ${activeBill.room}`, lm, y); y += 5;
         doc.setFont('helvetica', 'normal');
-        doc.text(`Check-in: ${GM.fmt.date(activeBill.checkIn)}   Check-out: ${GM.fmt.date(activeBill.checkOut)} (${activeBill.nights} nights)`, lm, y); y += 7;
+        doc.text(`Check-in: ${GM.fmt.date(activeBill.checkIn)}${activeBill.checkInTime ? ' @ ' + activeBill.checkInTime : ''}   Check-out: ${GM.fmt.date(activeBill.checkOut)}${activeBill.checkOutTime ? ' @ ' + activeBill.checkOutTime : ''} (${activeBill.nights} nights)`, lm, y); y += 7;
         doc.line(lm, y, lm + rw, y); y += 5;
 
         ['room', 'food', 'event'].forEach(type => {
@@ -321,8 +335,8 @@
             </td>
             <td style="font-size:0.85rem;color:var(--text-secondary);">${rec.phone || '—'}</td>
             <td><span style="background:var(--bg-raised);border-radius:4px;padding:2px 8px;font-size:0.8rem;">Room ${rec.room}</span></td>
-            <td>${GM.fmt.date(rec.checkIn)}</td>
-            <td>${GM.fmt.date(rec.checkOut)}</td>
+            <td>${GM.fmt.date(rec.checkIn)} ${rec.checkInTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkInTime + '</small>' : ''}</td>
+            <td>${GM.fmt.date(rec.checkOut)} ${rec.checkOutTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkOutTime + '</small>' : ''}</td>
             <td style="text-align:center;"><span style="font-family:var(--font-display);font-size:1rem;">${rec.nights}</span></td>
             <td style="color:var(--gold-bright);font-weight:600;">${rec.status === 'cancelled' ? '—' : GM.fmt.currency(rec.grandTotal)}</td>
             <td style="font-size:0.78rem;color:var(--text-muted);">${rec.status === 'cancelled' ? GM.fmt.date(rec.cancelledAt) : (rec.billNo || rec.id || '—')}</td>

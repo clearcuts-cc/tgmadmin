@@ -162,8 +162,8 @@
               </div>
               <div class="card animate-in animate-in-delay-2">
                 <h4 style="margin-bottom:0.75rem;">Stay Summary</h4>
-                <div class="bill-row"><span>Check-in</span><strong>${GM.fmt.date(booking.checkIn)}</strong></div>
-                <div class="bill-row"><span>Check-out</span><strong>${GM.fmt.date(booking.checkOut)}</strong></div>
+                <div class="bill-row"><span>Check-in</span><strong>${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</strong></div>
+                <div class="bill-row"><span>Check-out</span><strong>${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</strong></div>
                 <div class="bill-row"><span>Nights</span><strong>${nights}</strong></div>
                 <div class="bill-row"><span>Guests</span><strong>${booking.adults}A ${booking.children ? '+' + booking.children + 'C' : ''}</strong></div>
               </div>
@@ -197,7 +197,7 @@
                 <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)})</span>
                 <strong>${GM.fmt.currency(roomTotal)}</strong>
               </div>
-              <div class="bill-row">
+              <div class="bill-row" id="ci-gst-row">
                 <span id="ci-gst-label">Room GST</span>
                 <strong id="ci-gst-amount"></strong>
               </div>
@@ -208,7 +208,8 @@
 
               <div class="bill-grand" style="margin-top:1rem; margin-bottom:1.25rem;">
                 <span class="bill-grand__label">Amount to Collect</span>
-                <span class="bill-grand__value" id="ci-grand-total"></span>
+                <strong id="ci-grand-total"></strong>
+                <div style="font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.8; font-weight: normal; grid-column: 1 / -1; text-align: center;">Contact: +91 9944033765</div>
               </div>
 
 
@@ -255,12 +256,16 @@
           </div>
         </div>`;
 
-    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
     const gstAmount = Math.round(roomTotal * (roomGST / 100));
     const advancePaid = Number(booking.advance_paid) || 0;
     const grandTotal = Math.max(0, roomTotal + gstAmount - advancePaid);
 
-    document.getElementById('ci-gst-label').textContent = `Room GST(${roomGST} %)`;
+    const gstRow = document.getElementById('ci-gst-row');
+    if (gstRow) gstRow.style.display = enableGST ? 'flex' : 'none';
+
+    document.getElementById('ci-gst-label').textContent = `Room GST (${roomGST}%)`;
     document.getElementById('ci-gst-amount').textContent = GM.fmt.currency(gstAmount);
 
     const advRow = document.getElementById('ci-advance-row');
@@ -292,7 +297,8 @@
       const method = document.getElementById('ci-payment-method').value;
       const ref = document.getElementById('ci-payment-ref').value.trim();
 
-      const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+      const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+      const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
       const gstAmount = Math.round(roomTotal * (roomGST / 100));
       const advancePaid = Number(booking.advance_paid) || 0;
       const grandTotal = Math.max(0, roomTotal + gstAmount - advancePaid);

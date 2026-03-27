@@ -88,15 +88,27 @@
                 </select>
                 <span class="form-error" id="room-err">Please select a room.</span>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="checkInDate">Check-in Date <span class="req">*</span></label>
-                <input class="form-input" type="date" id="checkInDate" required>
-                <span class="form-error" id="checkin-err">Check-in date is required.</span>
+              <div class="form-grid form-grid--2">
+                <div class="form-group">
+                  <label class="form-label" for="checkInDate">Check-in Date <span class="req">*</span></label>
+                  <input class="form-input" type="date" id="checkInDate" required>
+                  <span class="form-error" id="checkin-err">Check-in date is required.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="checkInTime">Check-in Time</label>
+                  <input class="form-input" type="time" id="checkInTime" value="12:00">
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="checkOutDate">Check-out Date <span class="req">*</span></label>
-                <input class="form-input" type="date" id="checkOutDate" required>
-                <span class="form-error" id="checkout-err">Check-out must be after check-in.</span>
+              <div class="form-grid form-grid--2">
+                <div class="form-group">
+                  <label class="form-label" for="checkOutDate">Check-out Date <span class="req">*</span></label>
+                  <input class="form-input" type="date" id="checkOutDate" required>
+                  <span class="form-error" id="checkout-err">Check-out must be after check-in.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="checkOutTime">Check-out Time</label>
+                  <input class="form-input" type="time" id="checkOutTime" value="11:00">
+                </div>
               </div>
 
               <!-- Stay summary -->
@@ -313,11 +325,16 @@
     const checkIn = document.getElementById('checkInDate').value;
     const checkOut = document.getElementById('checkOutDate').value;
     const summary = document.getElementById('stay-summary');
+
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const gstRow = document.getElementById('sum-gst-row');
+    if (gstRow) gstRow.style.display = enableGST ? 'flex' : 'none';
+
     if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) { summary.style.display = 'none'; return; }
     const room = rooms.find(r => r.id === roomId);
     const nights = GM.nights(checkIn, checkOut);
     const subtotal = nights * room.rate;
-    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
     const gstAmount = Math.round(subtotal * (roomGST / 100));
     const total = subtotal + gstAmount;
 
@@ -411,7 +428,9 @@
       const aadhaar = document.getElementById('guestAadhaar').value.trim();
       const roomId = roomSelect.value;
       const checkIn = document.getElementById('checkInDate').value;
+      const checkInTime = document.getElementById('checkInTime').value;
       const checkOut = document.getElementById('checkOutDate').value;
+      const checkOutTime = document.getElementById('checkOutTime').value;
       const adults = parseInt(document.getElementById('adults').value) || 1;
       const children = parseInt(document.getElementById('children').value) || 0;
       const special = document.getElementById('specialRequests')?.value?.trim() || '';
@@ -452,7 +471,7 @@
           guestName: name,
           roomId: roomId,
           roomNumber: selectedRoom ? selectedRoom.number : '—',
-          checkIn, checkOut, adults, children,
+          checkIn, checkOut, checkInTime, checkOutTime, adults, children,
           status: 'confirmed',
           specialRequests: special,
           rate: selectedRoom ? selectedRoom.rate : 0,

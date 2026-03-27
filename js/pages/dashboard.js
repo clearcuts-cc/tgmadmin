@@ -9,22 +9,22 @@
     return 'evening';
   }
 
-  // Compute live stats
-  const cRooms = await window.RoomCache.getRooms();
-  const rooms = cRooms.map(r => ({ id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night }));
-  const bookings = MockData.bookings;
-  const occupied = rooms.filter(r => MockData.getRoomStatus(r.id) === 'occupied').length;
-  const available = rooms.filter(r => MockData.getRoomStatus(r.id) === 'available').length;
-  const confirmed = bookings.filter(b => b.status === 'confirmed').length;
-  const dueCheckout = rooms.filter(r => MockData.getRoomStatus(r.id) === 'due_checkout').length;
-  const maintenance = rooms.filter(r => MockData.getRoomStatus(r.id) === 'maintenance').length;
-  const occupancyPct = rooms.length ? Math.round((occupied / rooms.length) * 100) : 0;
+  async function renderDashboard() {
+    // Compute live stats
+    const cRooms = await window.RoomCache.getRooms();
+    const rooms = cRooms.map(r => ({ id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night }));
+    const bookings = MockData.bookings;
+    const occupied = rooms.filter(r => MockData.getRoomStatus(r.id) === 'occupied').length;
+    const available = rooms.filter(r => MockData.getRoomStatus(r.id) === 'available').length;
+    const confirmed = bookings.filter(b => b.status === 'confirmed').length;
+    const dueCheckout = rooms.filter(r => MockData.getRoomStatus(r.id) === 'due_checkout').length;
+    const maintenance = rooms.filter(r => MockData.getRoomStatus(r.id) === 'maintenance').length;
 
-  const checkedInBookings = bookings.filter(b => b.status === 'checked_in' || b.status === 'due_checkout');
-  const todayArrivals = bookings.filter(b => b.status === 'confirmed' && b.checkIn === MockData.TODAY);
-  const todayDepartures = bookings.filter(b => (b.status === 'checked_in' || b.status === 'due_checkout') && b.checkOut === MockData.TODAY);
+    const checkedInBookings = bookings.filter(b => b.status === 'checked_in' || b.status === 'due_checkout');
+    const todayArrivals = bookings.filter(b => b.status === 'confirmed' && b.checkIn === MockData.TODAY);
+    const todayDepartures = bookings.filter(b => (b.status === 'checked_in' || b.status === 'due_checkout') && b.checkOut === MockData.TODAY);
 
-  main.innerHTML = `
+    main.innerHTML = `
     <div class="page-header animate-in">
       <h1>Dashboard</h1>
       <p>Good ${getTimeGreeting()} · ${GM.fmt.date(MockData.TODAY)} · Live resort overview</p>
@@ -124,11 +124,10 @@
         <div class="card animate-in animate-in-delay-1">
           <h3 style="margin-bottom:1rem;">🏠 Room Status Overview</h3>
           ${rooms.map(room => {
-    const st = MockData.getRoomStatus(room.id);
-    const booking = MockData.getActiveBookingForRoom(room.id);
-    const colors = { available: 'var(--green)', occupied: 'var(--red)', confirmed: 'var(--blue)', due_checkout: 'var(--orange)', maintenance: 'var(--purple)' };
-    const icons = { available: '🌿', occupied: '🔴', confirmed: '🔵', due_checkout: '⏰', maintenance: '🔧' };
-    return `
+      const st = MockData.getRoomStatus(room.id);
+      const booking = MockData.getActiveBookingForRoom(room.id);
+      const colors = { available: 'var(--green)', occupied: 'var(--red)', confirmed: 'var(--blue)', due_checkout: 'var(--orange)', maintenance: 'var(--purple)' };
+      return `
               <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
                 <div style="width:36px;height:36px;background:var(--bg-raised);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:0.9rem;border:1px solid ${colors[st] || 'var(--border)'};color:${colors[st] || 'var(--text-secondary)'};">${room.number}</div>
                 <div style="flex:1;">
@@ -137,7 +136,7 @@
                 </div>
                 ${GM.statusBadge(st)}
               </div>`;
-  }).join('')}
+    }).join('')}
           <div style="margin-top:1rem;text-align:center;">
             <a href="#rooms" class="btn btn--ghost btn--sm">View Full Room Board →</a>
           </div>
@@ -154,8 +153,8 @@
               <thead><tr><th>Guest</th><th>Room</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 ${bookings.length === 0
-      ? `<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text-muted);">No bookings yet</td></tr>`
-      : [...bookings].reverse().slice(0, 6).map(b => `
+        ? `<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text-muted);">No bookings yet</td></tr>`
+        : [...bookings].reverse().slice(0, 6).map(b => `
                   <tr>
                     <td style="font-weight:500;">${b.guestName}</td>
                     <td>Room ${b.roomNumber}</td>
@@ -172,12 +171,12 @@
           <h3 style="margin-bottom:1rem;">📊 Quick Stats</h3>
           <div style="display:flex;flex-direction:column;gap:0.85rem;">
             ${[
-      { label: 'Available', val: available, color: 'var(--green)', pct: rooms.length ? Math.round(available / rooms.length * 100) : 0 },
-      { label: 'Occupied', val: occupied, color: 'var(--red)', pct: rooms.length ? Math.round(occupied / rooms.length * 100) : 0 },
-      { label: 'Confirmed', val: confirmed, color: 'var(--blue)', pct: rooms.length ? Math.round(confirmed / rooms.length * 100) : 0 },
-      { label: 'Due Checkout', val: dueCheckout, color: 'var(--orange)', pct: rooms.length ? Math.round(dueCheckout / rooms.length * 100) : 0 },
-      { label: 'Maintenance', val: maintenance, color: 'var(--purple)', pct: rooms.length ? Math.round(maintenance / rooms.length * 100) : 0 },
-    ].map(s => `
+        { label: 'Available', val: available, color: 'var(--green)', pct: rooms.length ? Math.round(available / rooms.length * 100) : 0 },
+        { label: 'Occupied', val: occupied, color: 'var(--red)', pct: rooms.length ? Math.round(occupied / rooms.length * 100) : 0 },
+        { label: 'Confirmed', val: confirmed, color: 'var(--blue)', pct: rooms.length ? Math.round(confirmed / rooms.length * 100) : 0 },
+        { label: 'Due Checkout', val: dueCheckout, color: 'var(--orange)', pct: rooms.length ? Math.round(dueCheckout / rooms.length * 100) : 0 },
+        { label: 'Maintenance', val: maintenance, color: 'var(--purple)', pct: rooms.length ? Math.round(maintenance / rooms.length * 100) : 0 },
+      ].map(s => `
               <div>
                 <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.3rem;">
                   <span style="color:var(--text-secondary);">${s.label}</span>
@@ -196,14 +195,27 @@
 
       </div><!-- end dash-grid -->
     </div><!-- end page-content -->
-  `;
+    `;
 
-  // Responsive grid
-  const dashGrid = document.getElementById('dash-grid');
+    // Handle initial responsive setup after render
+    handleResize();
+  }
+
   function handleResize() {
+    const dashGrid = document.getElementById('dash-grid');
     if (dashGrid) dashGrid.style.gridTemplateColumns = window.innerWidth < 900 ? '1fr' : '1fr 1fr';
   }
+
+  // Initial render
+  await renderDashboard();
+
+  // Real-time listener
+  const onDataChange = () => renderDashboard();
+  window.addEventListener('gm:data-change', onDataChange);
   window.addEventListener('resize', handleResize);
-  handleResize();
-  window.__gmPageCleanup = () => window.removeEventListener('resize', handleResize);
+
+  window.__gmPageCleanup = () => {
+    window.removeEventListener('gm:data-change', onDataChange);
+    window.removeEventListener('resize', handleResize);
+  };
 })();

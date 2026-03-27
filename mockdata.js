@@ -27,6 +27,13 @@ const MockData = (() => {
     async function init() {
         if (_ready) return;
         try {
+            const { data: { session } } = await db().auth.getSession();
+            if (session && session.user) {
+                const role = session.user.user_metadata?.role || 'employee';
+                localStorage.setItem('gm_user_role', role);
+                localStorage.setItem('gm_user_email', session.user.email);
+            }
+
             const [g, b, m, o, e, h, s, sp, rs] = await Promise.all([
                 db().from('guests').select('*'),
                 db().from('bookings').select('*'),
@@ -60,6 +67,8 @@ const MockData = (() => {
                     roomType: st.room_type,
                     checkinDate: st.checkin_date,
                     checkoutDate: st.checkout_date,
+                    checkInTime: st.checkin_time || '12:00',
+                    checkOutTime: st.checkout_time || '11:00',
                     nights: st.nights,
                     rate: Number(st.rate),
                     payments: payments
@@ -106,6 +115,8 @@ const MockData = (() => {
             id: b.id, guestId: b.guest_id, guestName: b.guest_name,
             roomId: b.room_id, roomNumber: b.room_number || '',
             checkIn: b.check_in, checkOut: b.check_out,
+            checkInTime: b.check_in_time || '12:00',
+            checkOutTime: b.check_out_time || '11:00',
             adults: b.adults || 1, children: b.children || 0,
             status: b.status || 'confirmed',
             specialRequests: b.special_requests || '',
@@ -145,6 +156,8 @@ const MockData = (() => {
             guestName: h.guest_name, phone: h.phone || '',
             room: h.room || '', roomType: h.room_type || '',
             checkIn: h.check_in, checkOut: h.check_out,
+            checkInTime: h.check_in_time || '12:00',
+            checkOutTime: h.check_out_time || '11:00',
             nights: h.nights || 1, rate: Number(h.rate) || 0,
             payments: h.payments || [], extraCharge: Number(h.extra_charge) || 0,
             discount: Number(h.discount) || 0, grandTotal: Number(h.grand_total) || 0,
@@ -157,47 +170,26 @@ const MockData = (() => {
         const channel = db().channel('gm-realtime');
 
         channel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, payload => {
-                handleRealtimeChange('guests', payload, normalizeGuest);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, payload => {
-                handleRealtimeChange('bookings', payload, normalizeBooking);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, payload => {
-                handleRealtimeChange('menu', payload, normalizeMenu);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
-                handleRealtimeChange('orders', payload, normalizeOrder);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, payload => {
-                handleRealtimeChange('events', payload, normalizeEvent);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'billing_history' }, payload => {
-                if (payload.eventType === 'INSERT') {
-                    const item = normalizeHistory(payload.new);
-                    if (!_cache.history.find(h => h.billNo === item.billNo)) {
-                        _cache.history.unshift(item);
-                    }
-                }
-                fireChangeEvent('history');
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, p => handleRealtimeChange('guests', p, normalizeGuest))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, p => handleRealtimeChange('bookings', p, normalizeBooking))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, p => handleRealtimeChange('menu', p, normalizeMenu))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, p => handleRealtimeChange('orders', p, normalizeOrder))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, p => handleRealtimeChange('events', p, normalizeEvent))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'billing_history' }, p => handleRealtimeChange('history', p, normalizeHistory))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'active_stays' }, async () => {
-                // Reload stays fully since they have nested payments
-                const [s, p] = await Promise.all([
-                    db().from('active_stays').select('*'),
-                    db().from('stay_payments').select('*'),
-                ]);
+                const { data } = await db().from('active_stays').select('*');
+                const { data: pData } = await db().from('stay_payments').select('*');
                 _cache.activeStays = {};
-                (s.data || []).forEach(st => {
+                (data || []).forEach(st => {
                     _cache.activeStays[st.booking_id] = {
-                        stayId: st.stay_id, _dbId: st.id,
-                        bookingId: st.booking_id, guestName: st.guest_name,
-                        room: st.room, roomType: st.room_type,
+                        stayId: st.stay_id, _dbId: st.id, bookingId: st.booking_id,
+                        guestName: st.guest_name, room: st.room, roomType: st.room_type,
                         checkinDate: st.checkin_date, checkoutDate: st.checkout_date,
+                        checkInTime: st.checkin_time || '12:00', checkOutTime: st.checkout_time || '11:00',
                         nights: st.nights, rate: Number(st.rate),
-                        payments: (p.data || []).filter(px => px.stay_id === st.id).map(px => ({
-                            _dbId: px.id, type: px.type, description: px.description,
-                            amount: Number(px.amount), method: px.method, ref: px.ref, paidAt: px.paid_at,
+                        payments: (pData || []).filter(p => p.stay_id === st.id).map(p => ({
+                            _dbId: p.id, type: p.type, description: p.description,
+                            amount: Number(p.amount), method: p.method, ref: p.ref, paidAt: p.paid_at
                         }))
                     };
                 });
@@ -217,10 +209,10 @@ const MockData = (() => {
     function handleRealtimeChange(cacheKey, payload, normalizer) {
         const arr = _cache[cacheKey];
         if (payload.eventType === 'INSERT') {
-            const item = normalizer(payload.new);
+            const item = normalizer ? normalizer(payload.new) : payload.new;
             if (!arr.find(x => x.id === item.id)) arr.push(item);
         } else if (payload.eventType === 'UPDATE') {
-            const item = normalizer(payload.new);
+            const item = normalizer ? normalizer(payload.new) : payload.new;
             const idx = arr.findIndex(x => x.id === item.id);
             if (idx !== -1) arr[idx] = item; else arr.push(item);
         } else if (payload.eventType === 'DELETE') {
@@ -228,11 +220,19 @@ const MockData = (() => {
             const idx = arr.findIndex(x => x.id === id);
             if (idx !== -1) arr.splice(idx, 1);
         }
-        fireChangeEvent(cacheKey);
+        fireChangeEvent(cacheKey, payload, normalizer);
     }
 
-    function fireChangeEvent(table) {
-        window.dispatchEvent(new CustomEvent('gm:data-change', { detail: { table } }));
+    function fireChangeEvent(table, payload, normalizer) {
+        const detail = { table };
+        if (payload) {
+            detail.type = payload.eventType;
+            detail.record = (payload.new && normalizer) ? normalizer(payload.new) : payload.new;
+            detail.old_record = (payload.old && normalizer) ? normalizer(payload.old) : payload.old;
+        } else {
+            detail.type = 'REFRESH';
+        }
+        window.dispatchEvent(new CustomEvent('gm:data-change', { detail }));
     }
 
     // ── ROOM STATUS (COMPUTED — same logic as before) ─────────────
@@ -400,6 +400,8 @@ const MockData = (() => {
                 guestId: bookingData.guestId, guestName: bookingData.guestName,
                 roomId: bookingData.roomId, roomNumber: bookingData.roomNumber || '',
                 checkIn: bookingData.checkIn, checkOut: bookingData.checkOut,
+                checkInTime: bookingData.checkInTime || '12:00',
+                checkOutTime: bookingData.checkOutTime || '11:00',
                 adults: Number(bookingData.adults) || 1,
                 children: Number(bookingData.children) || 0,
                 status: bookingData.status || 'confirmed',
@@ -414,6 +416,7 @@ const MockData = (() => {
                     id: booking.id, guest_id: booking.guestId, guest_name: booking.guestName,
                     room_id: booking.roomId, room_number: booking.roomNumber,
                     check_in: booking.checkIn, check_out: booking.checkOut,
+                    check_in_time: booking.checkInTime, check_out_time: booking.checkOutTime,
                     adults: booking.adults, children: booking.children,
                     status: booking.status, special_requests: booking.specialRequests,
                     rate: booking.rate, nights: booking.nights,
@@ -626,6 +629,7 @@ const MockData = (() => {
                     guest_name: record.guestName, phone: record.phone || '',
                     room: record.room || '', room_type: record.roomType || '',
                     check_in: record.checkIn, check_out: record.checkOut,
+                    check_in_time: record.checkInTime, check_out_time: record.checkOutTime,
                     nights: Number(record.nights), rate: Number(record.rate),
                     payments: record.payments || [],
                     extra_charge: Number(record.extraCharge) || 0,
@@ -668,6 +672,8 @@ const MockData = (() => {
                 guestName: booking.guestName, room: booking.roomNumber,
                 roomType: room.type, checkinDate: booking.checkIn,
                 checkoutDate: booking.checkOut,
+                checkInTime: booking.checkInTime,
+                checkOutTime: booking.checkOutTime,
                 nights: Number(n),
                 rate: Number(room.rate),
                 payments: isDeferred ? [] : [{
@@ -686,6 +692,8 @@ const MockData = (() => {
                     guest_name: booking.guestName, room: booking.roomNumber,
                     room_type: room.type, checkin_date: booking.checkIn,
                     checkout_date: booking.checkOut,
+                    checkin_time: booking.checkInTime,
+                    checkout_time: booking.checkOutTime,
                     nights: Number(n),
                     rate: Number(room.rate),
                 });
@@ -802,6 +810,7 @@ const MockData = (() => {
                 phone: booking ? (MockData.getGuestById(booking.guestId)?.phone || '') : '',
                 room: stay.room, roomType: stay.roomType,
                 checkIn: stay.checkinDate, checkOut: stay.checkoutDate,
+                checkInTime: stay.checkInTime, checkOutTime: stay.checkOutTime,
                 nights: stay.nights, rate: stay.rate,
                 payments: [...stay.payments],
                 extraCharge, discount, grandTotal,

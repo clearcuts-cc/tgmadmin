@@ -58,25 +58,25 @@ CREATE POLICY "rooms_delete" ON rooms FOR DELETE TO authenticated USING (get_use
 -- GUESTS
 CREATE POLICY "guests_select" ON guests FOR SELECT TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "guests_insert" ON guests FOR INSERT TO authenticated WITH CHECK (get_user_role() IN ('admin', 'manager', 'employee'));
-CREATE POLICY "guests_update" ON guests FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager'));
+CREATE POLICY "guests_update" ON guests FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "guests_delete" ON guests FOR DELETE TO authenticated USING (get_user_role() = 'admin');
 
 -- BOOKINGS
 CREATE POLICY "bookings_select" ON bookings FOR SELECT TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "bookings_insert" ON bookings FOR INSERT TO authenticated WITH CHECK (get_user_role() IN ('admin', 'manager', 'employee'));
-CREATE POLICY "bookings_update" ON bookings FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager'));
+CREATE POLICY "bookings_update" ON bookings FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "bookings_delete" ON bookings FOR DELETE TO authenticated USING (get_user_role() = 'admin');
 
 -- ACTIVE STAYS
 CREATE POLICY "active_stays_select" ON active_stays FOR SELECT TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "active_stays_insert" ON active_stays FOR INSERT TO authenticated WITH CHECK (get_user_role() IN ('admin', 'manager', 'employee'));
-CREATE POLICY "active_stays_update" ON active_stays FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager'));
+CREATE POLICY "active_stays_update" ON active_stays FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "active_stays_delete" ON active_stays FOR DELETE TO authenticated USING (get_user_role() = 'admin');
 
 -- STAY PAYMENTS
 CREATE POLICY "stay_payments_select" ON stay_payments FOR SELECT TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "stay_payments_insert" ON stay_payments FOR INSERT TO authenticated WITH CHECK (get_user_role() IN ('admin', 'manager', 'employee'));
-CREATE POLICY "stay_payments_update" ON stay_payments FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager'));
+CREATE POLICY "stay_payments_update" ON stay_payments FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "stay_payments_delete" ON stay_payments FOR DELETE TO authenticated USING (get_user_role() = 'admin');
 
 -- BILLING HISTORY
@@ -88,7 +88,7 @@ CREATE POLICY "billing_history_delete" ON billing_history FOR DELETE TO authenti
 -- ORDERS
 CREATE POLICY "orders_select" ON orders FOR SELECT TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "orders_insert" ON orders FOR INSERT TO authenticated WITH CHECK (get_user_role() IN ('admin', 'manager', 'employee'));
-CREATE POLICY "orders_update" ON orders FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager'));
+CREATE POLICY "orders_update" ON orders FOR UPDATE TO authenticated USING (get_user_role() IN ('admin', 'manager', 'employee'));
 CREATE POLICY "orders_delete" ON orders FOR DELETE TO authenticated USING (get_user_role() = 'admin');
 
 -- EVENTS

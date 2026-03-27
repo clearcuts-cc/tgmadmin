@@ -73,8 +73,8 @@
             <div class="detail-rows">
               <div class="detail-row"><span class="detail-row__label">Booking ID</span><span class="detail-row__value" style="font-size:0.82rem;color:var(--text-muted);">${booking.id}</span></div>
               <div class="detail-row"><span class="detail-row__label">Room</span><span class="detail-row__value">${room.number} — ${room.type}</span></div>
-              <div class="detail-row"><span class="detail-row__label">Check-in</span><span class="detail-row__value">${GM.fmt.date(booking.checkIn)}</span></div>
-              <div class="detail-row"><span class="detail-row__label">Check-out</span><span class="detail-row__value">${GM.fmt.date(booking.checkOut)}</span></div>
+              <div class="detail-row"><span class="detail-row__label">Check-in</span><span class="detail-row__value" id="checkin-val">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</span></div>
+              <div class="detail-row"><span class="detail-row__label">Check-out</span><span class="detail-row__value" id="checkout-val">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</span></div>
               <div class="detail-row"><span class="detail-row__label">Nights</span><span class="detail-row__value" style="font-family:var(--font-display);font-size:1.1rem;">${nights}</span></div>
               <div class="detail-row"><span class="detail-row__label">Guests</span><span class="detail-row__value">${booking.adults} adults${booking.children ? ', ' + booking.children + ' children' : ''}</span></div>
               <div class="detail-row"><span class="detail-row__label">Rate</span><span class="detail-row__value">${GM.fmt.currency(room.rate)} / night</span></div>
@@ -117,25 +117,12 @@
   }
   window.addEventListener('resize', handleResize);
   handleResize();
-  window.__gmPageCleanup = () => window.removeEventListener('resize', handleResize);
-
   // Check-in confirm
   const checkinBtn = document.getElementById('confirm-checkin-btn');
   if (checkinBtn) {
     checkinBtn.addEventListener('click', () => {
-      GM.confirm('Confirm Guest Check-in',
-        `Are you sure you want to check in ${booking.guestName} to Room ${booking.roomNumber}?`,
-        () => {
-          GM.btnLoading(checkinBtn, true);
-          setTimeout(() => {
-            MockData.updateBookingStatus(booking.id, 'checked_in');
-            GM.toast(`${booking.guestName} checked in to Room ${booking.roomNumber}!`, 'success');
-            checkinBtn.innerHTML = '✔ Checked In';
-            checkinBtn.disabled = true;
-            checkinBtn.className = 'btn btn--ghost btn--full';
-          }, 1000);
-        },
-        'Check In Now', false);
+      // Redirect to the dedicated check-in page which handles payments and startStay correctly
+      window.location.hash = `#checkin?booking=${booking.id}`;
     });
   }
 
@@ -159,4 +146,17 @@
         'Yes, Cancel Booking', true);
     });
   }
+
+  // Real-time listener
+  const onDataChange = (e) => {
+    if (e.detail.table === 'bookings' || e.detail.table === 'guests') {
+        window.location.reload(); // Simple reload for detail view
+    }
+  };
+  window.addEventListener('gm:data-change', onDataChange);
+
+  window.__gmPageCleanup = () => {
+    window.removeEventListener('resize', handleResize);
+    window.removeEventListener('gm:data-change', onDataChange);
+  };
 })();

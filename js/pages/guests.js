@@ -226,6 +226,22 @@
     });
 
     search.addEventListener('input', render);
+
+    // Real-time listener
+    const onDataChange = (e) => {
+      if (e.detail.table === 'guests') render();
+    };
+    window.addEventListener('gm:data-change', onDataChange);
+
+    const oldCleanup = window.__gmPageCleanup;
+    window.__gmPageCleanup = () => {
+      if (oldCleanup) oldCleanup();
+      window.removeEventListener('gm:data-change', onDataChange);
+      delete window.__gmViewGuest;
+      delete window.__gmEditGuest;
+      delete window.__gmDeleteGuest;
+    };
+
     render();
   }
 

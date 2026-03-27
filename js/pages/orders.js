@@ -191,7 +191,11 @@
   }
 
   function renderCurrentOrder() {
-    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const foodGST = enableGST ? (window.GMSettings ? window.GMSettings.get('foodGST') : 5) : 0;
+    const gstRow = document.querySelector('.bill-row:has(#order-gst-amount)');
+    if (gstRow) gstRow.style.display = enableGST ? 'flex' : 'none';
+
     if (currentOrder.length === 0) {
       orderItemsList.innerHTML = `<div class="empty-state" style="padding:1rem 0;"><span>🍽</span>No items added yet.</div>`;
       document.getElementById('order-subtotal').textContent = '₹0';
@@ -235,7 +239,8 @@
 
   placeOrderBtn.addEventListener('click', () => {
     if (!selectedBooking || currentOrder.length === 0) return;
-    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const foodGST = enableGST ? (window.GMSettings ? window.GMSettings.get('foodGST') : 5) : 0;
     const subtotal = currentOrder.reduce((s, o) => s + o.price * o.qty, 0);
     const gstAmount = Math.round(subtotal * (foodGST / 100));
     pendingOrderTotal = subtotal + gstAmount;
@@ -437,7 +442,8 @@
     const ord = MockData.orders.find(o => o.id === id);
     if (!ord) return;
 
-    const foodGST = window.GMSettings ? window.GMSettings.get('foodGST') : 5;
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const foodGST = enableGST ? (window.GMSettings ? window.GMSettings.get('foodGST') : 5) : 0;
     const subtotal = ord.items.reduce((s, i) => s + i.price * i.qty, 0);
     const gstAmount = Math.round(subtotal * (foodGST / 100));
 
@@ -471,7 +477,8 @@
           <div class="receipt">
             <div class="header">
               <div class="hotel-name">The Grand Mist</div>
-              <div style="font-size: 0.7rem; color: #666;">Luxury Stay & Dining</div>
+              <div style="font-size: 0.75rem; color: #444; margin-top: 4px;">Luxury Stay & Dining · Kodaikanal</div>
+              <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">Phone: +91 9944033765</div>
             </div>
             <div class="meta">
               <span><strong>Room:</strong> ${ord.room}</span>
@@ -500,7 +507,7 @@
               </tbody>
             </table>
             <div class="total-row"><span>Subtotal</span><span>₹${subtotal}</span></div>
-            <div class="total-row"><span>GST (${foodGST}%)</span><span>₹${gstAmount}</span></div>
+            ${enableGST ? `<div class="total-row"><span>GST (${foodGST}%)</span><span>₹${gstAmount}</span></div>` : ''}
             <div class="grand-total">
               <span>GRAND TOTAL</span>
               <span>₹${ord.total}</span>
@@ -522,7 +529,9 @@
 
   // Real-time updates
   const onDataChange = (e) => {
-    if (e.detail.table === 'orders') renderHistory(selectedBooking?.id);
+    const table = e.detail.table;
+    if (table === 'orders') renderHistory(selectedBooking?.id);
+    if (table === 'bookings') refreshRoomSelector();
   };
   window.addEventListener('gm:data-change', onDataChange);
 

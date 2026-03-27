@@ -231,6 +231,22 @@
     });
 
     renderCards();
+
+    // Real-time listener
+    const onDataChange = (e) => {
+      if (e.detail.table === 'events') renderCards();
+    };
+    window.addEventListener('gm:data-change', onDataChange);
+
+    const oldCleanup = window.__gmPageCleanup;
+    window.__gmPageCleanup = () => {
+      if (oldCleanup) oldCleanup();
+      window.removeEventListener('gm:data-change', onDataChange);
+      delete window.__gmViewEvent;
+      delete window.__gmRenderEventsList;
+      delete window.GMEvEdit;
+      delete window.GMEvDelete;
+    };
   }
 
   /* ══════════════════════════════════════════════════════════

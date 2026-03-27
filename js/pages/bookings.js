@@ -109,4 +109,12 @@
   });
 
   renderTable();
+
+  // Real-time listener
+  const onDataChange = () => renderTable();
+  window.addEventListener('gm:data-change', onDataChange);
+
+  window.__gmPageCleanup = () => {
+    window.removeEventListener('gm:data-change', onDataChange);
+  };
 })();

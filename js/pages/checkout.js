@@ -120,7 +120,8 @@
       ];
     }
 
-    const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+    const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
     const roomSubtotal = nights * rate;
     const roomGstAmt = Math.round(roomSubtotal * (roomGST / 100));
     const roomChargeTotal = roomSubtotal + roomGstAmt;
@@ -202,10 +203,11 @@
             <div class="receipt-bill animate-in">
 
               <!-- HEADER -->
-              <div class="rb-header" style="text-align: center;">
-                <img src="assets/logo.png" alt="Logo" style="max-width: 64px; max-height: 64px; margin: 0 auto 0.5rem auto; display: block; object-fit: contain;">
-                <h1 class="rb-resort-name">${s.resortName || 'THE GRAND MIST'}</h1>
-                <p class="rb-resort-sub">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
+              <div class="rb-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 1rem;">
+                <img src="assets/logo.png" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 0.5rem; display: block; object-fit: contain;">
+                <h1 class="rb-resort-name" style="margin: 0; line-height: 1.2;">${s.resortName || 'THE GRAND MIST'}</h1>
+                <p class="rb-resort-sub" style="margin: 0.25rem 0 0; opacity: 0.8;">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
+                <div style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: #333;">Contact: +91 9944033765</div>
               </div>
 
               <div class="rb-divider-full"></div>
@@ -225,11 +227,11 @@
               <div class="rb-info-grid">
                 <div class="rb-info-col">
                   <span class="rb-info-label">CHECK-IN</span>
-                  <span class="rb-info-value">${GM.fmt.date(booking.checkIn)}</span>
+                  <span class="rb-info-value">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</span>
                 </div>
                 <div class="rb-info-col">
                   <span class="rb-info-label">CHECK-OUT · NIGHTS</span>
-                  <span class="rb-info-value">${GM.fmt.date(booking.checkOut)} · ${nights} nights</span>
+                  <span class="rb-info-value">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''} · ${nights} nights</span>
                 </div>
               </div>
 
@@ -244,12 +246,13 @@
                 </div>
                 <span class="rb-row-amount">${GM.fmt.currency(roomSubtotal)}</span>
               </div>
+              ${enableGST ? `
               <div class="rb-row">
                 <div class="rb-row-left">
                   <span class="rb-row-title">GST (${roomGST}%)</span>
                 </div>
                 <span class="rb-row-amount">${GM.fmt.currency(roomGstAmt)}</span>
-              </div>
+              </div>` : ''}
 
               <div class="rb-divider-full"></div>
 
@@ -358,6 +361,7 @@
               <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
                 <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
                 <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #000; margin-top: 0.5rem;">Contact: +91 9944033765</div>
               </div>
 
               <div class="rb-divider-full"></div>
