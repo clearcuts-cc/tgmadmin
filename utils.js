@@ -8,6 +8,36 @@
    Types: success | error | info | warning
  ─────────────────────────────────────────────────────────── */
 const GM = (() => {
+    /* ── SETTINGS (GST Toggle, etc.) ───────────────────────── */
+    const SETTINGS_KEY = 'gm_settings';
+    const SETTINGS_DEFAULTS = {
+        resortName: 'The Grand Mist',
+        resortAddress: 'Kodaikanal, Dindigul, Tamil Nadu',
+        resortPhone: '+91 9944033765',
+        resortEmail: 'info@grandemist.com',
+        resortGSTIN: '',
+        resortStars: 4,
+        showPaymentMethod: true,
+        roomGST: 12,
+        foodGST: 5,
+        enableGST: true,
+        billPrefix: 'GM-2026',
+        billFooter: 'Thank you for staying at The Grand Mist!',
+    };
+
+    function loadSettings() {
+        try {
+            const raw = localStorage.getItem(SETTINGS_KEY);
+            return raw ? { ...SETTINGS_DEFAULTS, ...JSON.parse(raw) } : { ...SETTINGS_DEFAULTS };
+        } catch { return { ...SETTINGS_DEFAULTS }; }
+    }
+
+    function getSetting(key) {
+        return loadSettings()[key] ?? SETTINGS_DEFAULTS[key];
+    }
+
+    // Expose globally for page modules (checkout.js, etc.)
+    window.GMSettings = { get: getSetting, getAll: loadSettings };
 
     /* ── TOAST ─────────────────────────────────────────────── */
     function toast(message, type = "success", duration = 3500) {
@@ -274,7 +304,7 @@ const GM = (() => {
         });
     }
 
-    return { toast, confirm, prompt, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, compressImage, init };
+    return { toast, confirm, prompt, alert, btnLoading, highlightNav, initSidebar, liveFilter, fmt, statusBadge, capacityBar, nights, param, compressImage, init, settings: { get: getSetting, getAll: loadSettings } };
 })();
 
 // Auto-init on DOM ready (only in legacy multi-page mode; SPA router handles its own init)

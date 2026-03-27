@@ -3,37 +3,11 @@
   const main = document.getElementById('main-content');
   const STYLE_ID = 'gm-settings-styles';
 
-  /* ── STORAGE HELPERS ─────────────────────────────────────── */
+  /* ── STORAGE HELPERS (DELEGATED TO UTILS.JS) ────────────── */
   const STORAGE_KEY = 'gm_settings';
 
-  const DEFAULTS = {
-    resortName: 'The Grand Mist',
-    resortAddress: 'Kodaikanal, Dindigul, Tamil Nadu',
-    resortPhone: '+91 98765 43210',
-    resortEmail: 'info@grandemist.com',
-    resortGSTIN: '',
-    resortStars: 4,
-    showPaymentMethod: true,
-    roomGST: 12,
-    foodGST: 5,
-    enableGST: true,
-    billPrefix: 'GM-2026',
-    billFooter: 'Thank you for staying at The Grand Mist!',
-  };
-
-  function loadAll() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
-    } catch { return { ...DEFAULTS }; }
-  }
-
-  function getSetting(key) {
-    return loadAll()[key] ?? DEFAULTS[key];
-  }
-
-  /* ── GLOBAL ACCESSOR (used by checkout.js / history.js) ──── */
-  window.GMSettings = { get: getSetting, getAll: loadAll };
+  function loadAll() { return window.GMSettings.getAll(); }
+  function getSetting(key) { return window.GMSettings.get(key); }
 
   /* ── INJECT STYLES (once, idempotent) ────────────────────── */
   function injectStyles() {

@@ -28,7 +28,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notifications.slice(0, MAX_NOTIFS)));
     },
 
-    add(title, text, type = 'info', meta = {}) {
+    add(title, text, type = 'info', link = null, meta = {}) {
       const notif = {
         id: Date.now() + Math.random().toString(36).substr(2, 9),
         title,
@@ -36,6 +36,7 @@
         type, // 'info', 'success', 'warning', 'danger'
         time: new Date().toISOString(),
         unread: true,
+        link,
         meta
       };
 
@@ -89,10 +90,16 @@
           </div>`;
       }).join('');
 
-      // Add click listeners to mark as read
+      // Add click listeners to mark as read and redirect
       list.querySelectorAll('.notification-item').forEach(item => {
         item.addEventListener('click', () => {
-          this.markAsRead(item.dataset.id);
+          const id = item.dataset.id;
+          const n = this.notifications.find(notif => notif.id === id);
+          this.markAsRead(id);
+          if (n && n.link) {
+            window.location.hash = n.link;
+            document.getElementById('notif-dropdown')?.classList.remove('open');
+          }
         });
       });
     },
@@ -176,25 +183,25 @@
         // 1. New Booking
         if (table === 'bookings' && type === 'INSERT') {
           if (role === 'admin' || role === 'manager') {
-            this.add('New Booking Arrived', `Guest ${record.guest_name} booked Room ${record.room_number}`, 'success');
+            this.add('New Booking Arrived', `Guest ${record.guest_name} booked Room ${record.room_number}`, 'success', '#bookings');
           } else {
-            this.add('New Booking', `Room ${record.room_number} is now confirmed for ${record.guest_name}`, 'info');
+            this.add('New Booking', `Room ${record.room_number} is now confirmed for ${record.guest_name}`, 'info', '#bookings');
           }
         }
 
         // 2. Cancellation
         if (table === 'bookings' && type === 'UPDATE' && record.status === 'cancelled' && old_record.status !== 'cancelled') {
-          this.add('Booking Cancelled', `Room ${record.room_number} check-in for ${record.guest_name} was cancelled.`, 'warning');
+          this.add('Booking Cancelled', `Room ${record.room_number} check-in for ${record.guest_name} was cancelled.`, 'warning', '#bookings');
         }
 
         // 3. New Food Order
         if (table === 'orders' && type === 'INSERT') {
-          this.add('New Food Order', `Room ${record.room_number} placed an order (₹${record.total})`, 'info');
+          this.add('New Food Order', `Room ${record.room_number} placed an order (₹${record.total})`, 'info', `#orders?booking=${record.bookingId}`);
         }
 
         // 4. Admin Check-in (if handled by admin, notify others)
         if (table === 'bookings' && type === 'UPDATE' && record.status === 'checked_in' && old_record.status !== 'checked_in') {
-             this.add('Guest Checked In', `${record.guest_name} is now in Room ${record.room_number}`, 'success');
+          this.add('Guest Checked In', `${record.guest_name} is now in Room ${record.room_number}`, 'success', '#bookings');
         }
       });
     },
@@ -235,7 +242,7 @@
       overdue.forEach(b => {
         const key = `overdue_alert_${b.id}_${todayStr}`;
         if (!sessionStorage.getItem(key)) {
-          this.add('Overdue Check-out', `Room ${b.roomNumber} (${b.guestName}) has exceeded checkout time!`, 'danger');
+          this.add('Overdue Check-out', `Room ${b.roomNumber} (${b.guestName}) has exceeded checkout time!`, 'danger', '#checkin');
           sessionStorage.setItem(key, 'true'); // Only alert once per session/day for this booking
         }
       });

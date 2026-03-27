@@ -656,7 +656,8 @@ const MockData = (() => {
         async startStay(booking, room, paymentMethod, paymentRef, isDeferred = false) {
             const n = MockData.nightsBetween(booking.checkIn, booking.checkOut);
             const subtotal = n * room.rate;
-            const roomGST = window.GMSettings ? window.GMSettings.get('roomGST') : 12;
+            const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
+            const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
             const gstAmount = Math.round(subtotal * (roomGST / 100));
             const amount = subtotal + gstAmount;
 
@@ -678,7 +679,7 @@ const MockData = (() => {
                 rate: Number(room.rate),
                 payments: isDeferred ? [] : [{
                     _dbId: paymentDbId, type: 'room',
-                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)}) + GST ${roomGST}%` + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),
+                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)})` + (enableGST ? ` + GST ${roomGST}%` : '') + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),
                     amount: Number(collectionAmount),
                     paidAt: new Date().toISOString(),
                     method: paymentMethod, ref: paymentRef || '',
