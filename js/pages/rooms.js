@@ -113,7 +113,7 @@
         <h4 style="margin-bottom:0.6rem;">Current / Upcoming Guest</h4>
         <div class="detail-rows">
           <div class="detail-row"><span class="detail-row__label">Guest</span><span class="detail-row__value" style="font-weight:600;">${booking.guestName}</span></div>
-          <div class="detail-row"><span class="detail-row__label">Booking</span><span class="detail-row__value" style="font-size:0.8rem;color:var(--text-muted);">${booking.id}</span></div>
+          <div class="detail-row"><span class="detail-row__label">Booking</span><span class="detail-row__value" style="font-size:0.8rem;color:var(--text-muted);">${booking.displayId}</span></div>
           <div class="detail-row"><span class="detail-row__label">Check-in</span><span class="detail-row__value">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</span></div>
           <div class="detail-row"><span class="detail-row__label">Check-out</span><span class="detail-row__value">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</span></div>
           <div class="detail-row"><span class="detail-row__label">Nights</span><span class="detail-row__value">${nights}</span></div>

@@ -112,7 +112,9 @@ const MockData = (() => {
     }
     function normalizeBooking(b) {
         return {
-            id: b.id, guestId: b.guest_id, guestName: b.guest_name,
+            id: b.id,
+            displayId: (typeof b.id === 'string' && b.id.startsWith('TGM-')) ? b.id : 'TGM-' + String(b.id || '').substring(0, 8).toUpperCase(),
+            guestId: b.guest_id, guestName: b.guest_name,
             roomId: b.room_id, roomNumber: b.room_number || '',
             checkIn: b.check_in, checkOut: b.check_out,
             checkInTime: b.check_in_time || '12:00',
@@ -395,8 +397,12 @@ const MockData = (() => {
 
         // ── BOOKING CRUD ─────────────────────────────────────────
         async addBooking(bookingData) {
+            const generateId = () => {
+                const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+                return `TGM-${rand}`;
+            };
             const booking = {
-                id: bookingData.id || crypto.randomUUID(),
+                id: bookingData.id || generateId(),
                 guestId: bookingData.guestId, guestName: bookingData.guestName,
                 roomId: bookingData.roomId, roomNumber: bookingData.roomNumber || '',
                 checkIn: bookingData.checkIn, checkOut: bookingData.checkOut,

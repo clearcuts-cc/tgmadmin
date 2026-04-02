@@ -21,7 +21,7 @@
       <div style="display:flex;align-items:center;gap:1rem;">
         <a href="#bookings" class="btn btn--ghost btn--sm">← Back</a>
         <div>
-          <h1>Booking ${booking.id}</h1>
+          <h1>Booking ${booking.displayId}</h1>
           <p>${booking.guestName} · Room ${booking.roomNumber}</p>
         </div>
       </div>
@@ -71,7 +71,7 @@
           <div class="card mb-md animate-in">
             <h3 style="margin-bottom:1rem;">🗓 Booking Details</h3>
             <div class="detail-rows">
-              <div class="detail-row"><span class="detail-row__label">Booking ID</span><span class="detail-row__value" style="font-size:0.82rem;color:var(--text-muted);">${booking.id}</span></div>
+              <div class="detail-row"><span class="detail-row__label">Booking ID</span><span class="detail-row__value" style="font-size:0.82rem;color:var(--text-muted);">${booking.displayId}</span></div>
               <div class="detail-row"><span class="detail-row__label">Room</span><span class="detail-row__value">${room.number} — ${room.type}</span></div>
               <div class="detail-row"><span class="detail-row__label">Check-in</span><span class="detail-row__value" id="checkin-val">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</span></div>
               <div class="detail-row"><span class="detail-row__label">Check-out</span><span class="detail-row__value" id="checkout-val">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</span></div>

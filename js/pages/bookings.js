@@ -88,7 +88,7 @@
       const isCancelled = b.status === 'cancelled';
       return `
         <tr style="${isCancelled ? 'opacity:0.4; pointer-events: none;' : ''}">
-          <td style="font-size:0.78rem;color:var(--text-muted);">${b.id}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted);">${b.displayId}</td>
           <td style="font-weight:500;">${b.guestName}</td>
           <td>Room ${b.roomNumber}</td>
           <td>${GM.fmt.date(b.checkIn)}</td>

@@ -164,7 +164,7 @@
       return `<div class="bill-empty-row">None recorded</div>`;
     }
 
-    const billNo = `GM-${new Date().getFullYear()}-${String(MockData.completedBills.length + 1).padStart(4, '0')}`;
+    const billNo = `TGM-${new Date().getFullYear()}-${String(MockData.completedBills.length + 1).padStart(4, '0')}`;
     const generatedAt = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const s = window.GMSettings ? window.GMSettings.getAll() : {};
     const stars = '★'.repeat(s.resortStars || 4);

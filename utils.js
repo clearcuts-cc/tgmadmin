@@ -21,7 +21,7 @@ const GM = (() => {
         roomGST: 12,
         foodGST: 5,
         enableGST: true,
-        billPrefix: 'GM-2026',
+        billPrefix: 'TGM-2026',
         billFooter: 'Thank you for staying at The Grand Mist!',
     };
 
@@ -193,6 +193,12 @@ const GM = (() => {
         currency: (n) => "₹" + Number(n).toLocaleString("en-IN"),
         date: (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—",
         datetime: (d) => d ? new Date(d).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—",
+        bookingId: (id) => {
+            if (!id) return "—";
+            if (id.startsWith("TGM-")) return id;
+            // Shorten UUIDs for cleaner display
+            return "TGM-" + String(id).substring(0, 8).toUpperCase();
+        }
     };
 
     /* ── STATUS BADGE ──────────────────────────────────────── */
