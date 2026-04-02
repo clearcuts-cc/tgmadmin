@@ -8,6 +8,10 @@
 
     init() {
       this.load();
+      // Migration: Fix existing broken #checkin links to #checkout
+      this.notifications.forEach(n => {
+        if (n.title.includes('Check-out') && n.link === '#checkin') n.link = '#checkout';
+      });
       this.bindUI();
       this.setupRealtimeListeners();
       this.startOverdueCheck();
@@ -261,7 +265,7 @@
       overdue.forEach(b => {
         const key = `overdue_alert_${b.id}_${todayStr}`;
         if (!sessionStorage.getItem(key)) {
-          this.add('Overdue Check-out', `Room ${b.roomNumber} (${b.guestName}) has exceeded checkout time!`, 'danger', '#checkin');
+          this.add('Overdue Check-out', `Room ${b.roomNumber} (${b.guestName}) has exceeded checkout time!`, 'danger', `#checkout?booking=${b.id}`);
           sessionStorage.setItem(key, 'true'); // Only alert once per session/day for this booking
         }
       });

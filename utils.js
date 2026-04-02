@@ -157,8 +157,14 @@ const GM = (() => {
         const collapsed = localStorage.getItem("gm_sidebar_collapsed") === "true";
         if (collapsed) sidebar.classList.add("sidebar--collapsed");
 
+        const updateToggleSymbol = () => {
+            if (toggle) toggle.textContent = sidebar.classList.contains("sidebar--collapsed") ? "›" : "‹";
+        };
+        updateToggleSymbol();
+
         toggle?.addEventListener("click", () => {
             sidebar.classList.toggle("sidebar--collapsed");
+            updateToggleSymbol();
             localStorage.setItem("gm_sidebar_collapsed", sidebar.classList.contains("sidebar--collapsed"));
         });
 

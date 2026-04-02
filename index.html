@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Grand Mist — Admin</title>
     <meta name="description" content="The Grand Mist Resort Administration — Single Page Application">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1.0.2">
 </head>
 
 <body>
@@ -38,6 +38,9 @@
 
         <!-- SIDEBAR -->
         <aside id="sidebar" role="navigation" aria-label="Main navigation">
+            
+            <!-- Sidebar toggle arrow — moved inside sidebar for perfect persistent alignment -->
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">‹</button>
 
             <!-- Branding — top of sidebar -->
             <div class="sidebar-brand">
@@ -108,10 +111,6 @@
 
     <!-- Sidebar overlay (mobile) -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-    <!-- Sidebar toggle arrow — lives outside #app so position:fixed is always
-         relative to the viewport, never trapped by sidebar's transform. -->
-    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">‹</button>
 
 
 
