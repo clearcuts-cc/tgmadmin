@@ -23,9 +23,7 @@
 - **Success/Teal**: `#2ABFB0`
 
 ### 3.2 Key UI Components
-- **Sidebar**: Fixed-width (256px) navigation with a collapsible state (68px).
-- **Glassmorphism**: Subtle translucent panels with backdrop filters.
-- **Animations**: Standard `fadeInUp` transitions for all page switches.
+- **Iconography**: Strictly use stroke-based SVG icons (Lucide-style) instead of emojis to maintain a professional, corporate aesthetic.
 - **Sidebar Toggle**: A floating "‹ / ›" button attached to the sidebar edge for manual layout control.
 
 ---
@@ -69,9 +67,9 @@ A comprehensive database of regular and past guests.
 - **Package Selection**: Pre-defined or custom event packages including catering and decor.
 
 ### 4.8 Reports & Analytics (`#reports`)
-- **Revenue Overview**: Weekly/Monthly/Yearly breakdown of earnings.
-- **Occupancy Charts**: Heatmaps showing peak booking periods.
-- **Staff Performance**: Analytics on house-keeping speed and server response times.
+- **Visual Revenue Graphs**: Interactive line and bar charts showing revenue trends over time.
+- **Occupancy Heatmaps**: Radial or area graphs visualizing room filling patterns.
+- **Data Insights**: Automated growth percentage comparisons and performance graphs.
 
 ### 4.9 Employee Management (`#employees`)
 - **Staff Profiles**: Comprehensive directory of all resort staff with contact info and shift history.

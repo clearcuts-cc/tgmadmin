@@ -8,6 +8,7 @@
 
     init() {
       this.load();
+      this.initAudio();
       // Migration: Fix existing broken #checkin links to #checkout
       this.notifications.forEach(n => {
         if (n.title.includes('Check-out') && n.link === '#checkin') n.link = '#checkout';
@@ -16,7 +17,7 @@
       this.setupRealtimeListeners();
       this.startOverdueCheck();
       this.render();
-      console.log('🔔 Smart Alerts system initialised');
+      console.log('Icon-based Smart Alerts system initialised');
     },
 
     load() {
@@ -30,6 +31,37 @@
 
     save() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notifications.slice(0, MAX_NOTIFS)));
+    },
+
+    /* ── AUDIO NOTIFICATION ──────────────────────────────────── */
+    initAudio() {
+      // Create an AudioContext for high-quality programmatic chimes
+      this.audioCtx = null;
+      document.addEventListener('mousedown', () => {
+          if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }, { once: true });
+    },
+
+    playNotificationSound() {
+      if (!this.audioCtx) return;
+      if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+      
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, this.audioCtx.currentTime); // High A
+      osc.frequency.exponentialRampToValueAtTime(440, this.audioCtx.currentTime + 0.15); // Slide to A4
+      
+      gain.gain.setValueAtTime(0.0001, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, this.audioCtx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.3);
+      
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.35);
     },
 
     add(title, text, type = 'info', link = null, meta = {}) {
@@ -50,6 +82,7 @@
       this.save();
       this.render();
       this.showToast(notif);
+      this.playNotificationSound();
     },
 
     render() {
@@ -68,17 +101,17 @@
       if (this.notifications.length === 0) {
         list.innerHTML = `
           <div class="notifications__empty">
-            <span>🔔</span>
+            <span class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
             <p>No new alerts</p>
           </div>`;
         return;
       }
 
       const TYPES = {
-        info: { icon: 'ℹ️', class: 'info' },
-        success: { icon: '✅', class: 'success' },
-        warning: { icon: '⚠️', class: 'warning' },
-        danger: { icon: '🚨', class: 'danger' }
+        info: { icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>`, class: 'info' },
+        success: { icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`, class: 'success' },
+        warning: { icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>`, class: 'warning' },
+        danger: { icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`, class: 'danger' }
       };
 
       list.innerHTML = this.notifications.map(n => {
