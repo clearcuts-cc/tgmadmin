@@ -81,12 +81,21 @@
           <div>
             <div class="card mb-md">
               <h3 style="margin-bottom:1rem;">🏠 Stay Details</h3>
-              <div class="form-group">
-                <label class="form-label" for="roomSelect">Room <span class="req">*</span></label>
-                <select class="form-select" id="roomSelect" required>
-                  <option value="">— Select a room —</option>
-                </select>
-                <span class="form-error" id="room-err">Please select a room.</span>
+              <div class="form-grid form-grid--2">
+                <div class="form-group">
+                  <label class="form-label" for="roomSelect">Room <span class="req">*</span></label>
+                  <select class="form-select" id="roomSelect" required>
+                    <option value="">— Select a room —</option>
+                  </select>
+                  <span class="form-error" id="room-err">Please select a room.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="platformSelect">Booking Platform</label>
+                  <select class="form-select" id="platformSelect">
+                    <option value="">— Select a platform —</option>
+                    <!-- Injected by JS -->
+                  </select>
+                </div>
               </div>
               <div class="form-grid form-grid--2">
                 <div class="form-group">
@@ -118,7 +127,7 @@
                 <div class="bill-row" style="border-top:1px dashed var(--border);margin-top:0.4rem;padding-top:0.4rem;">
                   <span>Subtotal</span><strong id="sum-subtotal">—</strong>
                 </div>
-                <div class="bill-row"><span id="sum-gst-label">Room GST (0%)</span><strong id="sum-gst-amount">—</strong></div>
+                <div class="bill-row" id="sum-gst-row"><span id="sum-gst-label">Room GST (0%)</span><strong id="sum-gst-amount">—</strong></div>
                 <div class="bill-row" style="border-top:1px solid var(--border);margin-top:0.4rem;padding-top:0.4rem;">
                   <span style="color:var(--gold-bright);">Estimated Total</span>
                   <strong id="sum-total" style="color:var(--gold-bright);">—</strong>
@@ -189,6 +198,16 @@
       opt.textContent += st === 'maintenance' ? ' [Maintenance]' : ' [Unavailable]';
     }
     roomSelect.appendChild(opt);
+  });
+
+  // Populate Booking Platforms from GMSettings
+  const platformSelect = document.getElementById('platformSelect');
+  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : [];
+  platforms.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    platformSelect.appendChild(opt);
   });
 
   // Aadhaar auto-format + returning guest auto-fetch
@@ -386,15 +405,29 @@
   });
 
 
-  // Set default & min dates — today for check-in, tomorrow for check-out
+  // Initial dates
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const checkInEl = document.getElementById('checkInDate');
   const checkOutEl = document.getElementById('checkOutDate');
+
+  // Pre-fill from URL params (for calendar quick-booking)
+  const preRoom = window.GMRouteParam('roomId');
+  const preCheckIn = window.GMRouteParam('checkIn');
+  if (preRoom) roomSelect.value = preRoom;
+  if (preCheckIn) {
+    checkInEl.value = preCheckIn;
+    // Set checkout to next day relative to pre-checkin
+    const nextDay = new Date(preCheckIn);
+    nextDay.setDate(nextDay.getDate() + 1);
+    checkOutEl.value = nextDay.toISOString().split('T')[0];
+  } else {
+    checkInEl.value = today;
+    checkOutEl.value = tomorrow;
+  }
   checkInEl.min = today;
-  checkInEl.value = today;
   checkOutEl.min = today;
-  checkOutEl.value = tomorrow;
+  updateSummary();
 
   // Form submission
   document.getElementById('new-booking-form').addEventListener('submit', e => {
@@ -474,6 +507,7 @@
           checkIn, checkOut, checkInTime, checkOutTime, adults, children,
           status: 'confirmed',
           specialRequests: special,
+          platform: document.getElementById('platformSelect').value,
           rate: selectedRoom ? selectedRoom.rate : 0,
           nights,
           advance_paid: advancePaid,

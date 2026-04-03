@@ -122,6 +122,7 @@ const MockData = (() => {
             adults: b.adults || 1, children: b.children || 0,
             status: b.status || 'confirmed',
             specialRequests: b.special_requests || '',
+            platform: b.platform || 'Direct',
             rate: Number(b.rate) || 0, nights: b.nights || 1,
             advance_paid: Number(b.advance_paid) || 0,
             cancelledAt: b.cancelled_at || null,
@@ -238,20 +239,33 @@ const MockData = (() => {
     }
 
     // ── ROOM STATUS (COMPUTED — same logic as before) ─────────────
-    function computeRoomStatus(roomId) {
+    function computeRoomStatus(roomId, date = TODAY) {
         if (_cache.roomStatuses[roomId] === 'maintenance') return 'maintenance';
-        const today = new Date().toISOString().split('T')[0];
+        
         const ACTIVE = ['due_checkout', 'checked_in', 'confirmed'];
-        const activeBooking = _cache.bookings
-            .filter(b => b.roomId === roomId && ACTIVE.includes(b.status))
-            .sort((a, b) => ACTIVE.indexOf(a.status) - ACTIVE.indexOf(b.status))[0];
-        if (!activeBooking) return 'available';
-        if (activeBooking.status === 'checked_in') {
-            return activeBooking.checkOut === today ? 'due_checkout' : 'occupied';
+        const booking = _cache.bookings
+            .filter(b => b.roomId === roomId && b.status !== 'cancelled' && date >= b.checkIn && date <= b.checkOut)
+            .sort((a, b) => {
+                // Priority: checked_in > confirmed
+                const pA = a.status === 'checked_in' || a.status === 'due_checkout' ? 0 : 1;
+                const pB = b.status === 'checked_in' || b.status === 'due_checkout' ? 0 : 1;
+                return pA - pB;
+            })[0];
+
+        if (!booking) return 'available';
+        
+        // If it's today, we use the real status
+        if (date === TODAY) {
+            if (booking.status === 'checked_in') {
+                return booking.checkOut === TODAY ? 'due_checkout' : 'occupied';
+            }
+            return booking.status;
         }
-        if (activeBooking.status === 'due_checkout') return 'due_checkout';
-        if (activeBooking.status === 'confirmed') return 'confirmed';
-        return 'available';
+
+        // For future/past dates, we derive status from the check-in/out range
+        if (date === booking.checkOut) return 'due_checkout';
+        if (date === booking.checkIn) return 'confirmed';
+        return 'occupied';
     }
 
     // ── PUBLIC API ────────────────────────────────────────────────
@@ -425,6 +439,7 @@ const MockData = (() => {
                     check_in_time: booking.checkInTime, check_out_time: booking.checkOutTime,
                     adults: booking.adults, children: booking.children,
                     status: booking.status, special_requests: booking.specialRequests,
+                    platform: booking.platform || 'Direct',
                     rate: booking.rate, nights: booking.nights,
                     advance_paid: booking.advance_paid || 0,
                 });

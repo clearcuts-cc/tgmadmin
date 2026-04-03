@@ -23,6 +23,7 @@ const GM = (() => {
         enableGST: true,
         billPrefix: 'TGM-2026',
         billFooter: 'Thank you for staying at The Grand Mist!',
+        bookingPlatforms: ['Direct', 'Agoda', 'Booking.com', 'MakeMyTrip'],
     };
 
     function loadSettings() {
@@ -36,8 +37,20 @@ const GM = (() => {
         return loadSettings()[key] ?? SETTINGS_DEFAULTS[key];
     }
 
+    function updateSetting(key, val) {
+        const s = loadSettings();
+        s[key] = val;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        // Also update local cache for this object instance
+        window.dispatchEvent(new CustomEvent('gm-settings-updated', { detail: { key, val } }));
+    }
+
     // Expose globally for page modules (checkout.js, etc.)
-    window.GMSettings = { get: getSetting, getAll: loadSettings };
+    window.GMSettings = {
+        get: getSetting,
+        getAll: loadSettings,
+        update: updateSetting
+    };
 
     /* ── TOAST ─────────────────────────────────────────────── */
     function toast(message, type = "success", duration = 3500) {

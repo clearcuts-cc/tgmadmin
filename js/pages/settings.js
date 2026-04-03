@@ -339,6 +339,25 @@
         </div>
       </div>
 
+      <!-- SECTION 2: BOOKING PLATFORMS -->
+      <div class="settings-card animate-in animate-in-delay-1">
+        <div class="settings-card-header" style="justify-content: space-between;">
+          <div style="display:flex;align-items:center;gap:0.85rem;">
+            <div class="settings-card-header-icon" style="background:rgba(212,168,83,0.15);">🔗</div>
+            <div class="settings-card-header-text">
+              <h3>Booking Platforms</h3>
+              <p>Manage external booking sources (e.g. Agoda, Booking.com)</p>
+            </div>
+          </div>
+          <button class="btn btn--primary btn--sm" id="btn-add-platform">+ Add Platform</button>
+        </div>
+        <div class="settings-body">
+          <div id="platform-list" style="display:flex;flex-wrap:wrap;gap:0.75rem;">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+
       <!-- SECTION 3: RESORT INFO -->
       <div class="settings-card animate-in animate-in-delay-2">
         <div class="settings-card-header">
@@ -595,12 +614,61 @@
     document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
     document.getElementById('reset-settings-btn').addEventListener('click', resetSettings);
 
+    const renderPlatforms = () => {
+      const list = document.getElementById('platform-list');
+      const platforms = getSetting('bookingPlatforms') || [];
+      if (platforms.length === 0) {
+        list.innerHTML = '<div class="empty-state">No platforms added.</div>';
+        return;
+      }
+      list.innerHTML = platforms.map(p => `
+        <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);padding:0.5rem 0.85rem;border-radius:20px;border:1px solid rgba(255,255,255,0.1);">
+          <span style="font-size:0.85rem;">${p}</span>
+          <button class="del-platform-btn" data-val="${p}" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:2px 4px;font-size:1rem;line-height:1;">&times;</button>
+        </div>
+      `).join('');
 
+      list.querySelectorAll('.del-platform-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.dataset.val;
+          GM.confirm('Delete Platform', `Remove "${val}" from your list of booking sources?`, () => {
+            const current = getSetting('bookingPlatforms') || [];
+            const updated = current.filter(x => x !== val);
+            window.GMSettings.update('bookingPlatforms', updated);
+            renderPlatforms();
+            GM.toast(`Platform "${val}" removed`, 'info');
+          }, 'Delete', true);
+        });
+      });
+    };
+
+    document.getElementById('btn-add-platform').addEventListener('click', () => {
+      GM.prompt('Add Platform', 'Enter the name of the booking platform (e.g. Airbnb)', (val) => {
+        if (!val) return;
+        const current = getSetting('bookingPlatforms') || [];
+        if (current.includes(val)) {
+          GM.toast('Platform already exists', 'warning');
+          return;
+        }
+        window.GMSettings.update('bookingPlatforms', [...current, val]);
+        renderPlatforms();
+        GM.toast('Platform added', 'success');
+      });
+    });
+
+    document.getElementById('enableGST')?.addEventListener('change', (e) => {
+      window.GMSettings.update('enableGST', e.target.checked);
+      GM.toast(`GST Calculations turned ${e.target.checked ? 'ON' : 'OFF'}`, 'info');
+    });
+
+    renderPlatforms();
   }
 
   /* ── SAVE ────────────────────────────────────────────────── */
   function saveSettings() {
+    const s = loadAll();
     const settings = {
+      ...s,
       resortName: document.getElementById('resortName').value.trim(),
       resortAddress: document.getElementById('resortAddress').value.trim(),
       resortPhone: document.getElementById('resortPhone').value.trim(),
@@ -617,7 +685,6 @@
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-      window.GMSettings = { get: getSetting, getAll: loadAll };
       GM.toast('Settings saved successfully!', 'success');
 
       const btn = document.getElementById('save-settings-btn');
@@ -637,7 +704,6 @@
       'Reset all settings to factory defaults? This cannot be undone.',
       () => {
         localStorage.removeItem(STORAGE_KEY);
-        window.GMSettings = { get: getSetting, getAll: loadAll };
         render();
         GM.toast('Settings reset to defaults.', 'info');
       },

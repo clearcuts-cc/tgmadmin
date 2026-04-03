@@ -140,6 +140,7 @@
     const PAGE_MAP = {
         'dashboard': 'js/pages/dashboard.js',
         'rooms': 'js/pages/rooms.js',
+        'calendar': 'js/pages/calendar.js',
         'bookings': 'js/pages/bookings.js',
         'bookings-new': 'js/pages/bookings-new.js',
         'booking-detail': 'js/pages/booking-detail.js',
