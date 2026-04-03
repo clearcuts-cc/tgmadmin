@@ -92,9 +92,13 @@
                 <div class="form-group">
                   <label class="form-label" for="platformSelect">Booking Platform</label>
                   <select class="form-select" id="platformSelect">
-                    <option value="">— Select a platform —</option>
+                    <option value="">— Direct —</option>
                     <!-- Injected by JS -->
                   </select>
+                </div>
+                <div class="form-group" id="commission-row" style="display:none;">
+                  <label class="form-label" for="platformCommAmt">Commission Amount (₹) <span style="font-size:0.65rem;opacity:0.5;font-weight:400;">(Optional)</span></label>
+                  <input class="form-input" type="number" id="platformCommAmt" placeholder="e.g. 500" min="0" step="1">
                 </div>
               </div>
               <div class="form-grid form-grid--2">
@@ -202,12 +206,21 @@
 
   // Populate Booking Platforms from GMSettings
   const platformSelect = document.getElementById('platformSelect');
-  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : [];
-  platforms.forEach(p => {
+  const commRow = document.getElementById('commission-row');
+  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : ['Agoda', 'Booking.com', 'MakeMyTrip'];
+  
+  // Clear any existing options first (keep only the 'Direct' default)
+  platformSelect.innerHTML = '<option value="">— Direct —</option>';
+  
+  platforms.filter(p => p !== 'Direct').forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
     opt.textContent = p;
     platformSelect.appendChild(opt);
+  });
+
+  platformSelect.addEventListener('change', () => {
+    commRow.style.display = platformSelect.value ? 'block' : 'none';
   });
 
   // Aadhaar auto-format + returning guest auto-fetch
@@ -507,7 +520,8 @@
           checkIn, checkOut, checkInTime, checkOutTime, adults, children,
           status: 'confirmed',
           specialRequests: special,
-          platform: document.getElementById('platformSelect').value,
+          platform: platformSelect.value || 'Direct',
+          platform_comm: platformSelect.value ? (parseFloat(document.getElementById('platformCommAmt').value) || 0) : 0,
           rate: selectedRoom ? selectedRoom.rate : 0,
           nights,
           advance_paid: advancePaid,

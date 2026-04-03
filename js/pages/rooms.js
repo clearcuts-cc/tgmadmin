@@ -9,16 +9,16 @@
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;">
           <div>
             <h1>Room Board</h1>
-            <p>Viewing status for: <strong>${GM.fmt.date(viewDate)}</strong></p>
+            <p style="font-size:0.875rem;color:var(--text-secondary);opacity:0.9;">Viewing status for: <strong>${GM.fmt.date(viewDate)}</strong></p>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <label for="board-date" style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Check Date:</label>
-            <div style="display:flex;background:var(--bg-raised);border-radius:var(--radius-sm);padding:0.25rem;gap:0.25rem;border:1px solid var(--border);">
-              <button class="btn btn--sm btn--ghost" id="day-prev" style="padding:0.4rem 0.6rem;">←</button>
-              <input type="date" id="board-date" value="${viewDate}" class="form-control" style="width:160px;background:transparent;border:none;padding:0;">
-              <button class="btn btn--sm btn--ghost" id="day-next" style="padding:0.4rem 0.6rem;">→</button>
+            <label for="board-date" style="font-size:0.8rem;color:var(--text-primary);font-weight:600;margin-right:0.25rem;">Check Date:</label>
+            <div style="display:flex;align-items:center;background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">
+              <button class="btn btn--sm btn--ghost" id="day-prev" style="padding:0.45rem 0.75rem;border-radius:0;border-right:1px solid var(--border);">←</button>
+              <input type="date" id="board-date" value="${viewDate}" class="form-control" style="width:150px;background:transparent;border:none;color:var(--text-primary);font-weight:600;text-align:center;padding:0 0.5rem;font-size:0.9rem;">
+              <button class="btn btn--sm btn--ghost" id="day-next" style="padding:0.45rem 0.75rem;border-radius:0;border-left:1px solid var(--border);">→</button>
             </div>
-            <button class="btn btn--secondary btn--sm" id="reset-today">Today</button>
+            <button class="btn btn--secondary btn--sm" id="reset-today" style="margin-left:0.5rem;">Today</button>
           </div>
         </div>
       </div>

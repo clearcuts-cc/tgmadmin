@@ -439,7 +439,8 @@ const MockData = (() => {
                     check_in_time: booking.checkInTime, check_out_time: booking.checkOutTime,
                     adults: booking.adults, children: booking.children,
                     status: booking.status, special_requests: booking.specialRequests,
-                    platform: booking.platform || 'Direct',
+                    platform: booking.platform,
+                    platform_comm: booking.platform_comm,
                     rate: booking.rate, nights: booking.nights,
                     advance_paid: booking.advance_paid || 0,
                 });
