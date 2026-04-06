@@ -318,13 +318,16 @@ a:hover {
     justify-content: center;
 }
 
-.hamburger span {
+.hamburger-arrow {
     display: block;
-    width: 22px;
-    height: 2px;
-    background: currentColor;
-    border-radius: 2px;
-    transition: transform var(--dur-base), opacity var(--dur-fast);
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+    transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.hamburger.is-active .hamburger-arrow {
+    transform: rotate(180deg);
 }
 
 .header__mobile-brand {
@@ -344,7 +347,7 @@ a:hover {
     position: fixed;
     top: 0;
     left: 0;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     transition: width var(--dur-base) var(--ease);

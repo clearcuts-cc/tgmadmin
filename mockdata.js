@@ -132,6 +132,7 @@ const MockData = (() => {
     function normalizeMenu(m) {
         return {
             id: m.id, name: m.name, category: m.category || '',
+            description: m.description || '',
             price: Number(m.price), available: m.available !== false,
         };
     }
@@ -518,6 +519,7 @@ const MockData = (() => {
                 return {
                     id,
                     name: m.name, category: m.category || '',
+                    description: m.description || '',
                     price: Number(m.price), available: m.available !== false,
                 };
             });
@@ -526,7 +528,7 @@ const MockData = (() => {
                 const { error } = await db().from('menu_items').upsert(rows);
                 if (error) {
                     console.error('saveMenu error:', error);
-                    GM.toast('Failed to sync menu to cloud', 'error');
+                    GM.toast('Cloud Error: ' + (error.message || 'Unknown error'), 'error');
                 } else {
                     GM.toast('Menu synced to cloud', 'success');
                 }

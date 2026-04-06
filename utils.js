@@ -162,7 +162,7 @@ const GM = (() => {
     /* ── SIDEBAR TOGGLE ────────────────────────────────────── */
     function initSidebar() {
         const sidebar = document.getElementById("sidebar");
-        const toggle = document.getElementById("sidebar-toggle");
+        const toggles = document.querySelectorAll(".js-sidebar-toggle, #sidebar-toggle");
         const overlay = document.getElementById("sidebar-overlay");
         if (!sidebar) return;
 
@@ -171,24 +171,37 @@ const GM = (() => {
         if (collapsed) sidebar.classList.add("sidebar--collapsed");
 
         const updateToggleSymbol = () => {
-            if (toggle) toggle.textContent = sidebar.classList.contains("sidebar--collapsed") ? "›" : "‹";
+            const isCollapsed = sidebar.classList.contains("sidebar--collapsed");
+            toggles.forEach(t => {
+                if(t.classList.contains("sidebar__edge-toggle")) {
+                    t.innerHTML = isCollapsed ? "›" : "‹";
+                } else if(t.id === "sidebar-toggle") {
+                    t.textContent = isCollapsed ? "›" : "‹";
+                }
+            });
         };
         updateToggleSymbol();
 
-        toggle?.addEventListener("click", () => {
+        const toggleAction = () => {
             sidebar.classList.toggle("sidebar--collapsed");
             updateToggleSymbol();
             localStorage.setItem("gm_sidebar_collapsed", sidebar.classList.contains("sidebar--collapsed"));
+        };
+
+        toggles.forEach(toggle => {
+            toggle.addEventListener("click", toggleAction);
         });
 
         // Mobile: open/close via hamburger
         const hamburger = document.getElementById("hamburger");
         hamburger?.addEventListener("click", () => {
             sidebar.classList.toggle("sidebar--open");
+            hamburger.classList.toggle("is-active");
             overlay?.classList.toggle("sidebar-overlay--show");
         });
         overlay?.addEventListener("click", () => {
             sidebar.classList.remove("sidebar--open");
+            hamburger?.classList.remove("is-active");
             overlay.classList.remove("sidebar-overlay--show");
         });
     }

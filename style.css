@@ -348,11 +348,42 @@ a:hover {
   height: calc(100vh - var(--header-h));
   position: sticky;
   top: var(--header-h);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   transition: width var(--dur-base) var(--ease);
   z-index: 50;
+}
+
+.sidebar__edge-toggle {
+  position: absolute;
+  top: 2rem;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  display: none; /* hidden on mobile, shown on desktop */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 51;
+  transition: all var(--dur-fast);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+@media (min-width: 768px) {
+  .sidebar__edge-toggle {
+    display: flex;
+  }
+}
+
+.sidebar__edge-toggle:hover {
+  color: var(--gold-bright);
+  border-color: var(--gold-mid);
+  transform: scale(1.1);
 }
 
 .sidebar--collapsed {
@@ -362,6 +393,7 @@ a:hover {
 .sidebar__nav {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 0;
 }
 

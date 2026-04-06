@@ -38,6 +38,7 @@ function injectNav(activePage) {
 
   const sidebarHTML = `
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+      <button class="sidebar__edge-toggle js-sidebar-toggle" aria-label="Toggle sidebar">‹</button>
       <nav class="sidebar__nav">
         ${sidebarItems}
       </nav>
