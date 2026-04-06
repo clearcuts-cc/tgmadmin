@@ -327,6 +327,14 @@ a:hover {
     transition: transform var(--dur-base), opacity var(--dur-fast);
 }
 
+.header__mobile-brand {
+    display: none;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
 /* ── SIDEBAR ──────────────────────────────────────────────── */
 #sidebar {
     background: var(--bg-surface);
@@ -562,6 +570,10 @@ a:hover {
     justify-content: center;
     overflow: hidden;
     flex-shrink: 0;
+}
+
+.mobile-logout {
+    display: none;
 }
 
 .sidebar__mist-logo {
@@ -2707,13 +2719,19 @@ tbody tr:hover {
         transform: translateX(0);
     }
 
-    /* Toggle arrow: closed → left:0 (peeks from screen left edge);
-       open → JS sets left to sidebar width. CSS is the closed default. */
+    /* Hide desktop toggle arrow on mobile/tablet */
     .sidebar-toggle {
-        left: 0;
-        /* closed default — tab visible at screen left edge */
-        z-index: 1001;
-        /* above overlay (998) and sidebar (999) */
+        display: none !important;
+    }
+
+    /* Show hamburger menu */
+    .hamburger {
+        display: flex;
+        margin-right: 1rem;
+    }
+
+    .header__mobile-brand {
+        display: block;
     }
 
     /* page-wrapper takes full viewport width */
@@ -2828,9 +2846,30 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 
-    /* Hide verbose admin name in header to save space */
+    /* Adjust padding for smaller screens to prevent edge clipping */
+    .card {
+        padding: 1rem;
+    }
+
+    /* Hide verbose admin info to save space */
     .header__admin-info {
         display: none;
+    }
+
+    .mobile-logout {
+        display: block;
+    }
+
+    /* Stack quick actions vertically on small phones */
+    .quick-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .quick-actions .btn {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     /* Room grid: 2 per row */
@@ -2940,7 +2979,7 @@ tbody tr:hover {
 
     /* Stats: 1 per row on very small screens */
     .stat-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 
     /* Reduce stat card padding */
@@ -3448,6 +3487,7 @@ tbody tr:hover {
     top: calc(100% + 12px);
     right: -10px;
     width: 320px;
+    max-width: calc(100vw - 2rem);
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -3458,6 +3498,14 @@ tbody tr:hover {
     overflow: hidden;
     transform-origin: top right;
     animation: slideDown var(--dur-base) var(--ease-spring);
+}
+
+@media (max-width: 1023px) {
+    .notifications__dropdown {
+        position: fixed;
+        top: calc(var(--header-h) + 0.5rem);
+        right: 1rem;
+    }
 }
 
 .notifications__dropdown.open {

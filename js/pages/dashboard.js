@@ -129,12 +129,13 @@
       const colors = { available: 'var(--green)', occupied: 'var(--red)', confirmed: 'var(--blue)', due_checkout: 'var(--orange)', maintenance: 'var(--purple)' };
       return `
               <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
-                <div style="width:36px;height:36px;background:var(--bg-raised);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:0.9rem;border:1px solid ${colors[st] || 'var(--border)'};color:${colors[st] || 'var(--text-secondary)'};">${room.number}</div>
-                <div style="flex:1;">
-                  <div style="font-size:0.82rem;font-weight:500;">${room.type}</div>
-                  ${booking ? `<div style="font-size:0.72rem;color:var(--text-muted);">${booking.guestName}</div>` : `<div style="font-size:0.72rem;color:var(--text-muted);">${GM.fmt.currency(room.rate)}/night</div>`}
+                <div style="width:36px;height:36px;background:var(--bg-raised);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-display);font-weight:600;font-size:0.9rem;border:1px solid ${colors[st] || 'var(--border)'};color:${colors[st] || 'var(--text-secondary)'};">${room.number}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${room.type}</div>
+                  ${booking ? `<div style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${booking.guestName}</div>` : `<div style="font-size:0.72rem;color:var(--text-muted);">${GM.fmt.currency(room.rate)}/night</div>`}
                 </div>
-                ${GM.statusBadge(st)}
+                <!-- wrap badge in a flex-shrink-0 div so it never squishes -->
+                <div style="flex-shrink:0;">${GM.statusBadge(st)}</div>
               </div>`;
     }).join('')}
           <div style="margin-top:1rem;text-align:center;">

@@ -42,7 +42,7 @@
     if (avatarEl) avatarEl.textContent = (session.name || 'A').charAt(0).toUpperCase();
 
     /* ── LOGOUT ─────────────────────────────────────────────── */
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
+    const handleLogout = () => {
         if (window.GM) {
             GM.confirm('Log Out', 'Are you sure you want to log out of the admin panel?', async () => {
                 await window.supabaseClient.auth.signOut();
@@ -55,13 +55,36 @@
                 window.location.replace('login.html');
             });
         }
-    });
+    };
+    
+    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
+
+    /* ── PROFILE DROPDOWN ───────────────────────────────────── */
+    const profileBtn = document.getElementById('header-profile');
+    const profileDropdown = document.getElementById('profile-dropdown');
+    
+    if (profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = profileDropdown.style.display === 'block';
+            profileDropdown.style.display = isVisible ? 'none' : 'block';
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileBtn.contains(e.target)) {
+                profileDropdown.style.display = 'none';
+            }
+        });
+    }
 
     /* ── SIDEBAR BEHAVIOURS ─────────────────────────────────── */
     const appEl = document.getElementById('app');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const toggleBtn = document.getElementById('sidebar-toggle');
+    const hamburgerBtn = document.getElementById('hamburger');
 
     // Restore collapsed state (desktop)
     if (localStorage.getItem('gm_sidebar_collapsed') === 'true') {
@@ -94,8 +117,8 @@
         }
     }
 
-    /* Unified toggle — desktop collapse OR mobile drawer */
-    toggleBtn?.addEventListener('click', () => {
+    /* Unified toggle logic for sidebar */
+    function toggleSidebar() {
         if (window.innerWidth < 1024) {
             const isOpen = sidebar?.classList.contains('sidebar--open');
             if (isOpen) {
@@ -111,7 +134,11 @@
                 appEl?.classList.contains('sidebar--collapsed') ? 'true' : 'false');
         }
         updateArrow();
-    });
+    }
+
+    /* Unified toggle — desktop collapse OR mobile drawer */
+    toggleBtn?.addEventListener('click', toggleSidebar);
+    hamburgerBtn?.addEventListener('click', toggleSidebar);
 
     /* Close on overlay tap (mobile) */
     overlay?.addEventListener('click', () => {
