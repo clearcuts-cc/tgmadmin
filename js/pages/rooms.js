@@ -168,8 +168,9 @@
           <div class="detail-row"><span class="detail-row__label">Guest</span><span class="detail-row__value" style="font-weight:600;">${booking.guestName}</span></div>
           <div class="detail-row"><span class="detail-row__label">Dates</span><span class="detail-row__value" style="font-size:0.8rem;">${GM.fmt.date(booking.checkIn)} - ${GM.fmt.date(booking.checkOut)}</span></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:0.45rem;margin-top:1rem;">
+        <div style="display:flex;flex-direction:column;gap:0.45rem;margin-top:1.25rem;">
           <a href="#booking-detail?booking=${booking.id}" class="btn btn--primary">View Booking Details</a>
+          <button class="btn btn--danger btn--sm" id="quick-cancel-btn" style="margin-top:0.25rem;">No Show / Cancel</button>
         </div>`;
     } else if (!isMaint) {
       body += `
@@ -203,6 +204,25 @@
           renderGrid();
           openPanel(roomId);
         }
+      });
+    }
+
+    const cancelBtn = document.getElementById('quick-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        GM.confirm('Cancel Booking', 
+          `Are you sure you want to cancel the booking for <strong>${booking.guestName}</strong>?<br><br><span style="color:var(--text-muted);font-size:0.85rem;">This will free up Room ${room.number} for this date.</span>`,
+          () => {
+            GM.prompt('Reason for Cancellation', 'Optional: Why are you cancelling this booking?', (reason) => {
+              GM.btnLoading(cancelBtn, true);
+              setTimeout(async () => {
+                await MockData.cancelBooking(booking.id, reason || 'Cancelled from Room Board (No Show)');
+                renderGrid();
+                openPanel(roomId);
+              }, 600);
+            }, 'No show');
+          },
+          'Yes, Cancel Booking', true);
       });
     }
   }
