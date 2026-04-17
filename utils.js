@@ -23,7 +23,7 @@ const GM = (() => {
         enableGST: true,
         billPrefix: 'TGM-2026',
         billFooter: 'Thank you for staying at The Grand Mist!',
-        bookingPlatforms: ['Direct', 'Agoda', 'Booking.com', 'MakeMyTrip'],
+        bookingPlatforms: ['Direct', 'Agoda', 'Booking.com', 'MakeMyTrip', 'Goibibo', 'Airbnb'],
     };
 
     function loadSettings() {

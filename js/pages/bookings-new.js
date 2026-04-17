@@ -207,7 +207,7 @@
   // Populate Booking Platforms from GMSettings
   const platformSelect = document.getElementById('platformSelect');
   const commRow = document.getElementById('commission-row');
-  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : ['Agoda', 'Booking.com', 'MakeMyTrip'];
+  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : ['Direct', 'Agoda', 'Booking.com', 'MakeMyTrip', 'Goibibo', 'Airbnb'];
   
   // Clear any existing options first (keep only the 'Direct' default)
   platformSelect.innerHTML = '<option value="">— Direct —</option>';
