@@ -320,6 +320,7 @@ const MockData = (() => {
                 name: guestData.name, phone: guestData.phone,
                 email: guestData.email || '', address: guestData.address || '',
                 aadhaar: guestData.aadhaar || '',
+                aadhaarUrl: guestData.aadhaarUrl || '',
                 totalStays: Number(guestData.totalStays) || 0,
                 lastStay: guestData.lastStay || null,
             };

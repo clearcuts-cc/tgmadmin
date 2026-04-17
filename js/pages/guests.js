@@ -166,17 +166,17 @@
       }, 'Delete', true);
     };
 
-    document.getElementById('guest-modal-save').addEventListener('click', () => {
+    document.getElementById('guest-modal-save').addEventListener('click', async () => {
       const name = document.getElementById('g-name').value.trim();
       const phone = document.getElementById('g-phone').value.trim();
       if (!name || !phone) { GM.toast('Name and phone are required.', 'error'); return; }
       const btn = document.getElementById('guest-modal-save');
       GM.btnLoading(btn, true);
-      setTimeout(() => {
-        GM.btnLoading(btn, false);
+      
+      try {
         const session = JSON.parse(localStorage.getItem('gm_session') || '{}');
         if (editingGuestId) {
-          MockData.updateGuest(editingGuestId, {
+          await MockData.updateGuest(editingGuestId, {
             name, phone,
             email: document.getElementById('g-email').value.trim(),
             address: document.getElementById('g-address').value.trim(),
@@ -185,7 +185,7 @@
           });
           GM.toast('Guest updated.', 'success');
         } else {
-          MockData.addGuest({
+          await MockData.addGuest({
             name, phone,
             email: document.getElementById('g-email').value.trim(),
             address: document.getElementById('g-address').value.trim(),
@@ -199,7 +199,12 @@
         }
         closeModal();
         render();
-      }, 700);
+      } catch (err) {
+        console.error('Save guest error:', err);
+        GM.toast('Operation failed. Please try again.', 'error');
+      } finally {
+        GM.btnLoading(btn, false);
+      }
     });
 
     // Handle Modal File Upload
