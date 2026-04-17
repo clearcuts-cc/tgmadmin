@@ -53,14 +53,23 @@
 
           <div class="card animate-in animate-in-delay-2">
             <h3 style="margin-bottom:1rem;">📎 Documents</h3>
-            <div class="form-grid form-grid--2">
+            <div class="form-grid form-grid--2" id="document-grid">
               <div>
                 <div class="form-label" style="margin-bottom:0.5rem;">Aadhaar Card</div>
-                <div class="doc-img"><span>🪪</span><span>Aadhaar image placeholder</span></div>
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                  ${guest && guest.aadhaarUrl ? 
+                    guest.aadhaarUrl.split(',').filter(u => u.trim()).map(url => `
+                      <div class="doc-img" style="overflow:hidden; cursor:pointer;" onclick="window.open('${url.trim()}', '_blank')">
+                        <img src="${url.trim()}" style="width:100%; height:100%; object-fit:cover; display:block;" alt="Aadhaar Card">
+                      </div>
+                    `).join('') : 
+                    `<div class="doc-img"><span>🪪</span><span>No Aadhaar uploaded</span></div>`
+                  }
+                </div>
               </div>
               <div>
                 <div class="form-label" style="margin-bottom:0.5rem;">Guest Photo</div>
-                <div class="doc-img"><span>📷</span><span>Photo placeholder</span></div>
+                <div class="doc-img"><span>📷</span><span>No photo uploaded</span></div>
               </div>
             </div>
           </div>

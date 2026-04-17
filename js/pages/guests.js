@@ -308,17 +308,17 @@
 
           <div class="card animate-in animate-in-delay-2">
             <h4 style="margin-bottom:0.75rem;">Documents</h4>
-            ${guest.aadhaarUrl 
-              ? `<a href="${guest.aadhaarUrl}" target="_blank" class="doc-img mb-sm" style="text-decoration:none;display:flex;align-items:center;gap:0.75rem;">
-                   <span style="font-size:1.2rem;">🪪</span>
-                   <div style="flex:1;">
-                     <div style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">Aadhaar Card</div>
-                     <div style="font-size:0.7rem;color:var(--blue);">View Uploaded Document →</div>
-                   </div>
-                 </a>`
-              : `<div class="doc-img mb-sm" style="opacity:0.5;"><span>🪪</span><span>No Aadhaar uploaded</span></div>`
-            }
-            <div class="doc-img" style="opacity:0.5;"><span>📷</span><span>Guest photo — placeholder</span></div>
+            <div style="display:flex; flex-direction:column; gap:0.55rem;">
+              ${guest.aadhaarUrl 
+                ? guest.aadhaarUrl.split(',').filter(u => u.trim()).map(url => `
+                    <div class="doc-img" style="overflow:hidden; cursor:pointer;" onclick="window.open('${url.trim()}', '_blank')">
+                      <img src="${url.trim()}" style="width:100%; height:100%; object-fit:cover; display:block;" alt="Aadhaar Card">
+                    </div>
+                  `).join('')
+                : `<div class="doc-img" style="opacity:0.5;"><span>🪪</span><span>No Aadhaar uploaded</span></div>`
+              }
+              <div class="doc-img" style="opacity:0.5;"><span>📷</span><span>No guest photo uploaded</span></div>
+            </div>
           </div>
         </div>
 
