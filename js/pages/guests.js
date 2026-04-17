@@ -72,7 +72,7 @@
               </div>
               <div class="form-group" style="grid-column:1/-1;">
                 <label class="form-label">Aadhaar Card Image (Compressed to 200KB)</label>
-                <input type="file" id="g-aadhaar-file" accept="image/*" class="form-input" style="padding:0.4rem;">
+                <input type="file" id="g-aadhaar-file" accept="image/*,.heic,.heif" class="form-input" style="padding:0.4rem;">
                 <div id="g-aadhaar-status" style="font-size:0.7rem;margin-top:0.25rem;color:var(--text-muted);"></div>
               </div>
             </div>

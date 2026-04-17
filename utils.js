@@ -305,13 +305,38 @@ const GM = (() => {
 
     /* ── IMAGE COMPRESSION ─────────────────────────────────── */
     async function compressImage(file, maxKB = 200) {
-        return new Promise((resolve, reject) => {
-            if (!file.type.startsWith('image/')) return resolve(file);
+        return new Promise(async (resolve, reject) => {
+            let workingFile = file;
+
+            // 1. Support HEIC (iPhone) conversion via heic2any
+            const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif';
+            if (isHEIC && typeof heic2any !== 'undefined') {
+                try {
+                    const convertedBlob = await heic2any({
+                        blob: file,
+                        toType: "image/jpeg",
+                        quality: 0.8
+                    });
+                    // result can be an array if multiple images in one heic
+                    const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    workingFile = new File([finalBlob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: 'image/jpeg' });
+                } catch (heicErr) {
+                    console.error("HEIC conversion failed:", heicErr);
+                    // fallback to original file, might fail later but won't hang
+                }
+            }
+
+            if (!workingFile.type.startsWith('image/')) return resolve(workingFile);
+
             const reader = new FileReader();
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(workingFile);
             reader.onload = e => {
                 const img = new Image();
                 img.src = e.target.result;
+                img.onerror = () => {
+                    console.error("Image load failed");
+                    resolve(workingFile); // Fallback to raw file if preview fails
+                };
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let width = img.width;
@@ -331,14 +356,20 @@ const GM = (() => {
                     const check = async (q) => {
                         const blob = await convert(q);
                         if (blob.size / 1024 <= maxKB || q <= 0.1) {
-                            return new File([blob], file.name, { type: 'image/jpeg' });
+                            return new File([blob], workingFile.name, { type: 'image/jpeg' });
                         }
                         return check(q - step);
                     };
-                    check(quality).then(resolve).catch(reject);
+                    check(quality).then(resolve).catch(err => {
+                        console.error("Compression error:", err);
+                        resolve(workingFile);
+                    });
                 };
             };
-            reader.onerror = reject;
+            reader.onerror = () => {
+                console.error("FileReader error");
+                resolve(file);
+            };
         });
     }
 
