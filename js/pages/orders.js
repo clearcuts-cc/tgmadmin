@@ -261,7 +261,7 @@
         paymentStatus: 'unpaid'
       });
 
-      GM.toast(`Order placed for Room ${selectedBooking.roomNumber}. Marked as UNPAID.`, 'success');
+      GM.toast(`Order placed for ${selectedBooking.guestName} (Room ${selectedBooking.roomNumber}). Marked as UNPAID.`, 'success');
       currentOrder = [];
       renderCurrentOrder();
       renderHistory(selectedBooking?.id);
@@ -306,7 +306,7 @@
           ref
         });
 
-        GM.toast(`Order placed & ${GM.fmt.currency(pendingOrderTotal)} collected via ${method} for Room ${selectedBooking.roomNumber}`, 'success');
+          GM.toast(`Order placed for ${selectedBooking.guestName} (Room ${selectedBooking.roomNumber}). Collected via ${method}.`, 'success');
         currentOrder = [];
         renderCurrentOrder();
         renderHistory(selectedBooking?.id);
@@ -442,79 +442,219 @@
     const ord = MockData.orders.find(o => o.id === id);
     if (!ord) return;
 
-    const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
-    const foodGST = enableGST ? (window.GMSettings ? window.GMSettings.get('foodGST') : 5) : 0;
+    const s = window.GMSettings ? window.GMSettings.getAll() : {};
+    const enableGST = s.enableGST !== false;
+    const foodGST = enableGST ? (s.foodGST || 5) : 0;
     const subtotal = ord.items.reduce((s, i) => s + i.price * i.qty, 0);
     const gstAmount = Math.round(subtotal * (foodGST / 100));
 
-    const printWin = window.open('', '_blank', 'width=400,height=600');
+    const printWin = window.open('', '_blank', 'width=450,height=800');
     printWin.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Food Bill - ${ord.room}</title>
+          <title>Food Bill - Room ${ord.room}</title>
           <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #111; line-height: 1.5; font-size: 16px; }
-            .receipt { border: 1px solid #ddd; padding: 25px; max-width: 450px; margin: auto; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
-            .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 15px; margin-bottom: 20px; }
-            .hotel-name { font-weight: 800; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px; color: #000; }
-            .meta { font-size: 1rem; margin: 12px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #bbb; padding-bottom: 10px; }
-            .items { width: 100%; font-size: 1rem; border-collapse: collapse; margin: 20px 0; }
-            .items th { text-align: left; border-bottom: 2px solid #eee; padding: 8px 0; text-transform: uppercase; font-size: 0.85rem; color: #666; }
-            .items td { padding: 10px 0; border-bottom: 1px solid #f9f9f9; }
-            .total-row { display: flex; justify-content: space-between; font-size: 1rem; margin-top: 8px; color: #444; }
-            .grand-total { border-top: 2px solid #111; margin-top: 15px; padding-top: 12px; font-weight: 800; font-size: 1.3rem; display: flex; justify-content: space-between; color: #000; }
-            .footer { text-align: center; margin-top: 35px; font-size: 0.9rem; color: #555; font-style: italic; border-top: 1px solid #eee; padding-top: 15px; }
-            @media print { 
-              body { padding: 0; background: none; font-size: 18px; } 
-              .receipt { border: none; box-shadow: none; max-width: 650px; width: 100%; padding: 40px; } 
-              .hotel-name { font-size: 2.2rem; }
-              .grand-total { font-size: 1.8rem; }
-              .items th, .items td { padding: 12px 0; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+            
+            * { box-sizing: border-box; }
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+              color: #111; 
+              line-height: 1.4; 
+              margin: 0; 
+              padding: 40px 20px;
+              background: #f4f4f4;
+            }
+            
+            .receipt { 
+              background: #fff; 
+              max-width: 450px; 
+              margin: 0 auto; 
+              padding: 35px;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              border-radius: 4px;
+              position: relative;
+            }
+
+            /* Remove browser header/footer */
+            @page {
+              margin: 0;
+              size: auto;
+            }
+
+            @media print {
+              body { padding: 0; background: none; }
+              .receipt { 
+                box-shadow: none; 
+                max-width: 100%; 
+                width: 100%; 
+                margin: 0;
+                padding: 15mm 15mm; /* Professional margins */
+              }
+            }
+
+            .header { text-align: center; margin-bottom: 30px; }
+            .hotel-name { 
+              font-weight: 800; 
+              font-size: 1.7rem; 
+              text-transform: uppercase; 
+              letter-spacing: 0.05em; 
+              margin-bottom: 6px;
+              color: #000;
+            }
+            .hotel-tagline { font-size: 0.8rem; color: #555; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+            .hotel-info { font-size: 0.75rem; color: #777; margin-top: 2px; }
+
+            .bill-type {
+              text-align: center;
+              border-top: 1px solid #eee;
+              border-bottom: 1px solid #eee;
+              padding: 8px 0;
+              margin: 20px 0;
+              font-weight: 600;
+              font-size: 0.9rem;
+              letter-spacing: 0.2em;
+              color: #444;
+            }
+
+            .meta-grid { 
+              display: grid; 
+              grid-template-columns: 1fr 1.2fr;
+              gap: 15px;
+              margin-bottom: 25px;
+              font-size: 0.85rem;
+            }
+            .meta-item { display: flex; flex-direction: column; gap: 3px; }
+            .meta-label { color: #888; font-size: 0.7rem; text-transform: uppercase; font-weight: 600; }
+            .meta-value { font-weight: 600; color: #111; }
+
+            .items-table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 25px 0; 
+            }
+            .items-table th { 
+              text-align: left; 
+              padding: 10px 0; 
+              border-bottom: 2px solid #111;
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #666;
+            }
+            .items-table td { padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem; }
+            .price-col { text-align: right; font-weight: 500; }
+            .qty-col { text-align: center; color: #666; }
+
+            .summary { margin-top: 20px; }
+            .summary-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.95rem; color: #444; }
+            .grand-total { 
+              margin-top: 15px;
+              padding-top: 15px; 
+              border-top: 2px solid #111; 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: baseline;
+            }
+            .grand-label { font-weight: 800; font-size: 1.1rem; letter-spacing: 0.02em; }
+            .grand-amount { font-weight: 800; font-size: 1.6rem; color: #000; }
+
+            .footer { 
+              text-align: center; 
+              margin-top: 45px; 
+              font-size: 0.85rem; 
+              color: #666; 
+              padding-top: 20px;
+              border-top: 1px dashed #ddd;
+            }
+            .status-badge {
+              display: inline-block;
+              margin-top: 10px;
+              padding: 4px 10px;
+              background: #f0f0f0;
+              border-radius: 4px;
+              font-size: 0.7rem;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #444;
             }
           </style>
         </head>
         <body onload="window.print(); window.close();">
           <div class="receipt">
             <div class="header">
-              <div class="hotel-name">The Grand Mist</div>
-              <div style="font-size: 0.75rem; color: #444; margin-top: 4px;">Luxury Stay & Dining · Kodaikanal</div>
-              <div style="font-size: 0.7rem; color: #666; margin-top: 2px;">Phone: +91 9944033765</div>
+              <div class="hotel-name">${s.resortName || 'The Grand Mist'}</div>
+              <div class="hotel-tagline">Luxury Stay & Dining · Kodaikanal</div>
+              <div class="hotel-info">
+                ${s.resortAddress ? `<div>${s.resortAddress}</div>` : ''}
+                <div>Phone: ${s.resortPhone || '+91 9944033765'}</div>
+                ${s.resortGSTIN ? `<div>GSTIN: ${s.resortGSTIN}</div>` : ''}
+              </div>
             </div>
-            <div class="meta">
-              <span><strong>Room:</strong> ${ord.room}</span>
-              <span><strong>ID:</strong> #${ord.id.slice(0, 6)}</span>
+
+            <div class="bill-type">FOOD BILL</div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Room Number</span>
+                <span class="meta-value">${ord.room}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Bill ID</span>
+                <span class="meta-value">#${ord.id.slice(0, 8).toUpperCase()}</span>
+              </div>
+              <div class="meta-item" style="grid-column: span 2;">
+                <span class="meta-label">Guest Name</span>
+                <span class="meta-value">${ord.guestName}</span>
+              </div>
+              <div class="meta-item" style="grid-column: span 2;">
+                <span class="meta-label">Date & Time</span>
+                <span class="meta-value">${GM.fmt.datetime(ord.createdAt)}</span>
+              </div>
             </div>
-            <div style="font-size: 0.9rem; margin-bottom: 15px; border-left: 3px solid #111; padding-left: 10px;">
-              <strong>Guest:</strong> ${ord.guestName}<br>
-              <strong>Date:</strong> ${GM.fmt.datetime(ord.createdAt)}
-            </div>
-            <table class="items">
+
+            <table class="items-table">
               <thead>
                 <tr>
-                  <th>Item</th>
-                  <th style="text-align:center;">Qty</th>
-                  <th style="text-align:right;">Total</th>
+                  <th>Item Description</th>
+                  <th class="qty-col">Qty</th>
+                  <th class="price-col">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 ${ord.items.map(i => `
                   <tr>
                     <td>${i.name}</td>
-                    <td style="text-align:center;">${i.qty}</td>
-                    <td style="text-align:right;">₹${i.price * i.qty}</td>
+                    <td class="qty-col">${i.qty}</td>
+                    <td class="price-col">₹${(i.price * i.qty).toLocaleString()}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
-            <div class="total-row"><span>Subtotal</span><span>₹${subtotal}</span></div>
-            ${enableGST ? `<div class="total-row"><span>GST (${foodGST}%)</span><span>₹${gstAmount}</span></div>` : ''}
-            <div class="grand-total">
-              <span>GRAND TOTAL</span>
-              <span>₹${ord.total}</span>
+
+            <div class="summary">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <span>₹${subtotal.toLocaleString()}</span>
+              </div>
+              ${enableGST ? `
+              <div class="summary-row">
+                <span>GST (${foodGST}%)</span>
+                <span>₹${gstAmount.toLocaleString()}</span>
+              </div>
+              ` : ''}
+              
+              <div class="grand-total">
+                <span class="grand-label">GRAND TOTAL</span>
+                <span class="grand-amount">₹${ord.total.toLocaleString()}</span>
+              </div>
             </div>
+
             <div class="footer">
-              Thank you for dining with us!<br>
-              Order Status: ${ord.status.toUpperCase()}
+              <div>${s.billFooter || 'Thank you for dining with us!'}</div>
+              <div class="status-badge">${ord.status.toUpperCase()}</div>
+              <div style="font-size: 0.65rem; color: #aaa; margin-top: 15px;">Generated by TGM Management System</div>
             </div>
           </div>
         </body>

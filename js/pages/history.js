@@ -121,14 +121,18 @@
           </div>`;
       }
 
+      const s = window.GMSettings ? window.GMSettings.getAll() : {};
+      const stars = '★'.repeat(s.resortStars || 4);
+
       return `
         <div id="bill-print-area">
           <div class="bill-card">
             <div class="bill-header" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem 1rem;">
               <img src="assets/logo.png" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 0.75rem; display: block; object-fit: contain;">
-              <div class="bill-resort-name" style="margin:0; font-size: 1.5rem;">The Grand Mist</div>
-              <div class="bill-resort-sub" style="margin:0.25rem 0 0;">KODAIKANAL, DINDIGUL · ★★★★</div>
-              <div style="font-size:0.85rem; font-weight:600; color:#333; margin-top:0.5rem;">Contact: +91 9944033765</div>
+              <div class="bill-resort-name" style="margin:0; font-size: 1.5rem;">${s.resortName || 'The Grand Mist'}</div>
+              <div class="bill-resort-sub" style="margin:0.25rem 0 0;">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</div>
+              <div style="font-size:0.85rem; font-weight:600; color:#333; margin-top:0.5rem;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
+              ${s.resortGSTIN ? `<div style="font-size:0.8rem; font-weight:600; color:#444; margin-top:0.15rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
             </div>
 
             <div class="bill-guest-info">
@@ -144,6 +148,11 @@
                 <div class="bill-info-label">Check-in</div>
                 <div class="bill-info-value">${GM.fmt.date(rec.checkIn)} ${rec.checkInTime ? '@ ' + rec.checkInTime : ''}</div>
               </div>
+              ${rec.actualArrivalTime ? `
+              <div class="bill-guest-info-item">
+                <div class="bill-info-label">Actual Arrival</div>
+                <div class="bill-info-value" style="color:var(--gold-bright); font-weight:600;">${rec.actualArrivalTime}</div>
+              </div>` : ''}
               <div class="bill-guest-info-item">
                 <div class="bill-info-label">Check-out · Nights</div>
                 <div class="bill-info-value">${GM.fmt.date(rec.checkOut)} ${rec.checkOutTime ? '@ ' + rec.checkOutTime : ''} &nbsp;·&nbsp; ${rec.nights} nights</div>
@@ -175,7 +184,7 @@
             <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
               <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
               <div style="font-size: 2.2rem; font-weight: 900; color: #000;">${GM.fmt.currency(rec.grandTotal)}</div>
-               <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #000; font-weight: 600;">Contact: +91 9944033765</div>
+               <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #000; font-weight: 600;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
              </div>
 
             <div class="rb-divider-full"></div>
@@ -219,6 +228,8 @@
         });
       }
       try {
+        const s = window.GMSettings ? window.GMSettings.getAll() : {};
+        const starsStr = '★'.repeat(s.resortStars || 4);
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'mm', format: 'a5' });
         const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
@@ -229,11 +240,14 @@
         let y = 15; const lm = 15, rw = 130;
 
         doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-        doc.text('THE GRAND MIST', 73, y, { align: 'center' }); y += 6;
+        doc.text((s.resortName || 'THE GRAND MIST').toUpperCase(), 73, y, { align: 'center' }); y += 6;
         doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-        doc.text('Kodaikanal, Dindigul | ★★★★', 73, y, { align: 'center' }); y += 4;
+        doc.text(`${s.resortAddress || 'Kodaikanal, Dindigul'} | ${starsStr}`, 73, y, { align: 'center' }); y += 4;
         doc.setFontSize(7); doc.setTextColor(100);
-        doc.text('Contact: +91 9944033765', 73, y, { align: 'center' }); y += 4;
+        doc.text(`Contact: ${s.resortPhone || '+91 9944033765'}`, 73, y, { align: 'center' }); y += 4;
+        if (s.resortGSTIN) {
+          doc.text(`GSTIN: ${s.resortGSTIN}`, 73, y, { align: 'center' }); y += 4;
+        }
         doc.setTextColor(0);
         doc.setDrawColor(180); doc.line(lm, y, lm + rw, y); y += 5;
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);

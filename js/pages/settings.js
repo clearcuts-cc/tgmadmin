@@ -466,6 +466,26 @@
         </div>
       </div>
 
+      <!-- SECTION 5: ADVANCED / RESET -->
+      <div class="settings-card animate-in animate-in-delay-4" style="border-color: rgba(239, 68, 68, 0.2);">
+        <div class="settings-card-header">
+          <div class="settings-card-header-icon" style="background:rgba(239,68,68,0.1);">🧹</div>
+          <div class="settings-card-header-text">
+            <h3>Advanced: Data Management</h3>
+            <p>Delete test/dummy operational data</p>
+          </div>
+        </div>
+        <div class="settings-body">
+          <p class="settings-hint" style="margin-bottom:1.25rem; color:rgba(255,255,255,0.4);">
+            Use this to clear all <strong>Bookings, Guests, Food Orders, and Bills</strong> before you start using the system for real. 
+            <br><span style="color:var(--gold-mid);">Note: Your Rooms, Settings, and Food Menu will NOT be deleted.</span>
+          </p>
+          <button class="btn btn--danger" id="clear-dummy-btn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444;">
+            Clear All Operational Dummy Data
+          </button>
+        </div>
+      </div>
+
       <!-- SAVE / RESET -->
       <div class="settings-actions animate-in">
         <button class="btn-save-settings" id="save-settings-btn">💾 Save All Settings</button>
@@ -659,6 +679,17 @@
     document.getElementById('enableGST')?.addEventListener('change', (e) => {
       window.GMSettings.update('enableGST', e.target.checked);
       GM.toast(`GST Calculations turned ${e.target.checked ? 'ON' : 'OFF'}`, 'info');
+    });
+
+    document.getElementById('clear-dummy-btn')?.addEventListener('click', () => {
+      GM.confirm('WIPE ALL DATA?', 
+        '<span style="color:#ef4444; font-weight:700;">DANGER:</span> This will permanently delete ALL Guests, Bookings, Orders, and Billing History. <br><br>Your Rooms, Settings, and Food Menu will remain safe.', 
+        async () => {
+          GM.btnLoading(document.getElementById('clear-dummy-btn'), true);
+          await MockData.clearOperationalData();
+          GM.btnLoading(document.getElementById('clear-dummy-btn'), false);
+        },
+        'Yes, Clear All Data', true);
     });
 
     renderPlatforms();

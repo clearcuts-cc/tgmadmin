@@ -69,6 +69,7 @@ const MockData = (() => {
                     checkoutDate: st.checkout_date,
                     checkInTime: st.checkin_time || '12:00',
                     checkOutTime: st.checkout_time || '11:00',
+                    actualArrivalTime: st.actual_arrival_time || null,
                     nights: st.nights,
                     rate: Number(st.rate),
                     payments: payments
@@ -162,6 +163,7 @@ const MockData = (() => {
             checkIn: h.check_in, checkOut: h.check_out,
             checkInTime: h.check_in_time || '12:00',
             checkOutTime: h.check_out_time || '11:00',
+            actualArrivalTime: h.actual_arrival_time || null,
             nights: h.nights || 1, rate: Number(h.rate) || 0,
             payments: h.payments || [], extraCharge: Number(h.extra_charge) || 0,
             discount: Number(h.discount) || 0, grandTotal: Number(h.grand_total) || 0,
@@ -190,6 +192,7 @@ const MockData = (() => {
                         guestName: st.guest_name, room: st.room, roomType: st.room_type,
                         checkinDate: st.checkin_date, checkoutDate: st.checkout_date,
                         checkInTime: st.checkin_time || '12:00', checkOutTime: st.checkout_time || '11:00',
+                        actualArrivalTime: st.actual_arrival_time || null,
                         nights: st.nights, rate: Number(st.rate),
                         payments: (pData || []).filter(p => p.stay_id === st.id).map(p => ({
                             _dbId: p.id, type: p.type, description: p.description,
@@ -660,6 +663,7 @@ const MockData = (() => {
                     room: record.room || '', room_type: record.roomType || '',
                     check_in: record.checkIn, check_out: record.checkOut,
                     check_in_time: record.checkInTime, check_out_time: record.checkOutTime,
+                    actual_arrival_time: record.actualArrivalTime || null,
                     nights: Number(record.nights), rate: Number(record.rate),
                     payments: record.payments || [],
                     extra_charge: Number(record.extraCharge) || 0,
@@ -683,7 +687,7 @@ const MockData = (() => {
         get activeStays() { return _cache.activeStays; },
         get completedBills() { return _cache.history; },
 
-        async startStay(booking, room, paymentMethod, paymentRef, isDeferred = false) {
+        async startStay(booking, room, paymentMethod, paymentRef, isDeferred = false, actualArrival = null) {
             const n = MockData.nightsBetween(booking.checkIn, booking.checkOut);
             const subtotal = n * room.rate;
             const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
@@ -705,6 +709,7 @@ const MockData = (() => {
                 checkoutDate: booking.checkOut,
                 checkInTime: booking.checkInTime,
                 checkOutTime: booking.checkOutTime,
+                actualArrivalTime: actualArrival,
                 nights: Number(n),
                 rate: Number(room.rate),
                 payments: isDeferred ? [] : [{
@@ -725,6 +730,7 @@ const MockData = (() => {
                     checkout_date: booking.checkOut,
                     checkin_time: booking.checkInTime,
                     checkout_time: booking.checkOutTime,
+                    actual_arrival_time: actualArrival,
                     nights: Number(n),
                     rate: Number(room.rate),
                 });
@@ -999,6 +1005,35 @@ const MockData = (() => {
                     grand_total: h.grandTotal || 0, status: h.status || 'completed',
                 }));
                 db().from('billing_history').upsert(rows, { onConflict: 'bill_no' }).then();
+            }
+        },
+        // ── SYSTEM RESET ───────────────────────────────────────
+        async clearOperationalData() {
+            try {
+                // Delete in correct order to respect FK constraints if any (stay_payments first)
+                await Promise.all([
+                    db().from('stay_payments').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('active_stays').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('billing_history').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('guests').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                    db().from('room_status_overrides').delete().neq('room_id', '0'),
+                ]);
+
+                // Clear cache
+                _cache.guests = [];
+                _cache.bookings = [];
+                _cache.orders = [];
+                _cache.history = [];
+                _cache.activeStays = {};
+                _cache.roomStatuses = {};
+
+                GM.toast('All operational data cleared successfully', 'success');
+                window.dispatchEvent(new CustomEvent('gm-data-change'));
+            } catch (err) {
+                console.error('Error clearing data:', err);
+                GM.toast('Failed to clear some data: ' + err.message, 'error');
             }
         },
     };

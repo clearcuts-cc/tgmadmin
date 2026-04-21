@@ -238,7 +238,8 @@
                 <img src="assets/logo.png" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 0.5rem; display: block; object-fit: contain;">
                 <h1 class="rb-resort-name" style="margin: 0; line-height: 1.2;">${s.resortName || 'THE GRAND MIST'}</h1>
                 <p class="rb-resort-sub" style="margin: 0.25rem 0 0; opacity: 0.8;">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
-                <div style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: #333;">Contact: +91 9944033765</div>
+                <div style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: #333;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
+                ${s.resortGSTIN ? `<div style="font-size: 0.8rem; font-weight: 600; margin-top: 0.15rem; color: #444;">GSTIN: ${s.resortGSTIN}</div>` : ''}
               </div>
 
               <div class="rb-divider-full"></div>
@@ -260,6 +261,11 @@
                   <span class="rb-info-label">CHECK-IN</span>
                   <span class="rb-info-value">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</span>
                 </div>
+                ${stay?.actualArrivalTime ? `
+                <div class="rb-info-col">
+                  <span class="rb-info-label">ACTUAL ARRIVAL</span>
+                  <span class="rb-info-value" style="color:#b45309; font-weight:700;">${stay.actualArrivalTime}</span>
+                </div>` : ''}
                 <div class="rb-info-col">
                   <span class="rb-info-label">CHECK-OUT · NIGHTS</span>
                   <span class="rb-info-value">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''} · ${nights} nights</span>
@@ -392,7 +398,7 @@
               <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
                 <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
                 <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</div>
-                <div style="font-size: 0.85rem; font-weight: 600; color: #000; margin-top: 0.5rem;">Contact: +91 9944033765</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #000; margin-top: 0.5rem;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
               </div>
 
               <div class="rb-divider-full"></div>

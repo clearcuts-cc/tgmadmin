@@ -118,7 +118,9 @@
 
   // Real-time listener
   const onDataChange = () => {
-     if (!GMRouteParam('roomId') && !GMRouteParam('booking')) renderRoomSelector();
+    if (window.location.hash.startsWith('#checkin')) {
+      if (!GMRouteParam('roomId') && !GMRouteParam('booking')) renderRoomSelector();
+    }
   };
   window.addEventListener('gm:data-change', onDataChange);
 
@@ -200,7 +202,7 @@
               </div>
               <div class="card animate-in animate-in-delay-2">
                 <h4 style="margin-bottom:0.75rem;">Stay Summary</h4>
-                <div class="bill-row"><span>Check-in</span><strong>${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</strong></div>
+                <div class="bill-row"><span>Check-in</span><strong id="summary-checkin-time">${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}</strong></div>
                 <div class="bill-row"><span>Check-out</span><strong>${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</strong></div>
                 <div class="bill-row"><span>Nights</span><strong>${nights}</strong></div>
                 <div class="bill-row"><span>Guests</span><strong>${booking.adults}A ${booking.children ? '+' + booking.children + 'C' : ''}</strong></div>
@@ -222,6 +224,13 @@
                     <input type="checkbox" id="chk-${i}" style="accent-color:var(--green);width:18px;height:18px;">
                     ${item}
                   </label>`).join('')}
+                <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem;border-top:1px dashed var(--border);padding-top:0.6rem;margin-top:0.4rem;" for="chk-arrival">
+                  <input type="checkbox" id="chk-arrival" style="accent-color:var(--gold-bright);width:18px;height:18px;">
+                  <div style="flex:1;">
+                    <span style="font-weight:600;color:var(--gold-bright);">Now Arrival</span>
+                    <span id="arrival-time-display" style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;font-family:var(--font-display);"></span>
+                  </div>
+                </label>
               </div>
             </div>
 
@@ -320,7 +329,27 @@
     // Responsive grids
     const infoGrid = document.getElementById('checkin-info-grid');
     const payGrid = document.getElementById('payment-form-grid');
+    const arrivalCheck = document.getElementById('chk-arrival');
+    const arrivalDisplay = document.getElementById('arrival-time-display');
+    const summaryCheckinTime = document.getElementById('summary-checkin-time');
+    
+    // Store original scheduled time
+    const originalCheckInTime = `${GM.fmt.date(booking.checkIn)} ${booking.checkInTime ? '@ ' + booking.checkInTime : ''}`;
+    let capturedArrival = null;
 
+    arrivalCheck.addEventListener('change', () => {
+      if (arrivalCheck.checked) {
+        capturedArrival = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        arrivalDisplay.textContent = `@ ${capturedArrival}`;
+        // Update summary display
+        summaryCheckinTime.innerHTML = `<span style="color:var(--gold-bright);">${GM.fmt.date(booking.checkIn)} @ ${capturedArrival}</span>`;
+      } else {
+        capturedArrival = null;
+        arrivalDisplay.textContent = '';
+        // Revert to original
+        summaryCheckinTime.textContent = originalCheckInTime;
+      }
+    });
 
     function handleResize() {
       const col = window.innerWidth < 600 ? '1fr' : '1fr 1fr';
@@ -349,7 +378,12 @@
           const btn = document.getElementById('confirm-checkin');
           GM.btnLoading(btn, true);
           try {
-            await MockData.startStay(booking, room, method, ref, false);
+            // If arrival is captured, use it as the official check-in time for this stay
+            if (capturedArrival) {
+              booking.checkInTime = capturedArrival;
+            }
+            
+            await MockData.startStay(booking, room, method, ref, false, capturedArrival);
             await MockData.updateBookingStatus(booking.id, 'checked_in');
 
             document.getElementById('checkin-success').classList.remove('hidden');
