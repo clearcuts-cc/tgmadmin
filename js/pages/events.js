@@ -16,7 +16,7 @@
           <h1>Events</h1>
           <p>Plan and manage resort activities and experiences</p>
         </div>
-        ${window.GMIsAdmin ? `<button class="btn btn--primary" id="create-event-btn">＋ Create Event</button>` : ''}
+        ${(window.GMIsAdmin || window.GMIsManager || window.GMIsEmployee) ? `<button class="btn btn--primary" id="create-event-btn">＋ Create Event</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -143,10 +143,10 @@
             <span class="badge badge--blue">₹${ev.price}/person</span>
             <span style="font-size:0.78rem;color:var(--text-muted);">${used} registered</span>
           </div>
-          <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+            <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
             <button onclick="window.__gmViewEvent('${ev.id}')" class="btn btn--sm btn--ghost">View Details →</button>
-            ${window.GMIsAdmin ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>` : ''}
-            ${window.GMIsAdmin ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>` : ''}
+            ${(window.GMIsAdmin || window.GMIsManager || window.GMIsEmployee) ? `<button class="btn btn--sm btn--ghost btn--icon" title="Edit" onclick="GMEvEdit('${ev.id}')">✏</button>` : ''}
+            ${(window.GMIsAdmin || window.GMIsManager || window.GMIsEmployee) ? `<button class="btn btn--sm btn--danger btn--icon" title="Delete" onclick="GMEvDelete('${ev.id}')">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -288,7 +288,7 @@
           <h1>${event.name}</h1>
           <p>${GM.fmt.date(event.date)} · ${event.time} · ₹${event.price}/person · Max ${event.maxCapacity} guests</p>
         </div>
-        ${window.GMIsAdmin ? `<button onclick="window.__gmEditFromDetail('${event.id}')" class="btn btn--ghost btn--sm">✏ Edit Event</button>` : ''}
+        ${(window.GMIsAdmin || window.GMIsManager || window.GMIsEmployee) ? `<button onclick="window.__gmEditFromDetail('${event.id}')" class="btn btn--ghost btn--sm">✏ Edit Event</button>` : ''}
       </div>
     </div>
     <div class="page-content">
@@ -314,7 +314,6 @@
                   ${event.services.map(s => `<span style="font-size:0.75rem;background:rgba(212,168,83,0.1);color:var(--gold-bright);border-radius:6px;padding:0.2rem 0.5rem;border:1px solid rgba(212,168,83,0.2);">${s.name} — ₹${s.amount}</span>`).join('')}
                 </div>
               </div>` : ''}
-            </div>
           </div>
 
           <div class="card animate-in animate-in-delay-1">

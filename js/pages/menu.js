@@ -170,7 +170,7 @@
               <div class="menu-item__desc">${(item.description && item.description !== 'undefined') ? item.description : ''}</div>
             </div>
             <div class="menu-item__price">₹${item.price}</div>
-            ${window.GMIsAdmin ? `
+            ${(window.GMIsAdmin || window.GMIsManager || window.GMIsEmployee) ? `
             <label class="toggle" title="Toggle availability">
               <input type="checkbox" ${item.available ? 'checked' : ''} onchange="GMMenuToggle('${item.id}', this.checked)">
               <span class="toggle-slider"></span>
