@@ -589,7 +589,7 @@
               <div class="hotel-info">
                 ${s.resortAddress ? `<div>${s.resortAddress}</div>` : ''}
                 <div>Phone: ${s.resortPhone || '+91 9944033765'}</div>
-                ${s.resortGSTIN ? `<div>GSTIN: ${s.resortGSTIN}</div>` : ''}
+                ${(enableGST && s.resortGSTIN) ? `<div>GSTIN: ${s.resortGSTIN}</div>` : ''}
               </div>
             </div>
 
@@ -638,7 +638,7 @@
                 <span>Subtotal</span>
                 <span>₹${subtotal.toLocaleString()}</span>
               </div>
-              ${enableGST ? `
+              ${(enableGST && gstAmount > 0) ? `
               <div class="summary-row">
                 <span>GST (${foodGST}%)</span>
                 <span>₹${gstAmount.toLocaleString()}</span>

@@ -132,7 +132,7 @@
               <div class="bill-resort-name" style="margin:0; font-size: 1.5rem;">${s.resortName || 'The Grand Mist'}</div>
               <div class="bill-resort-sub" style="margin:0.25rem 0 0;">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</div>
               <div style="font-size:0.85rem; font-weight:600; color:#333; margin-top:0.5rem;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
-              ${s.resortGSTIN ? `<div style="font-size:0.8rem; font-weight:600; color:#444; margin-top:0.15rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
+              ${(enableGST && s.resortGSTIN) ? `<div style="font-size:0.8rem; font-weight:600; color:#444; margin-top:0.15rem;">GSTIN: ${s.resortGSTIN}</div>` : ''}
             </div>
 
             <div class="bill-guest-info">
@@ -245,7 +245,7 @@
         doc.text(`${s.resortAddress || 'Kodaikanal, Dindigul'} | ${starsStr}`, 73, y, { align: 'center' }); y += 4;
         doc.setFontSize(7); doc.setTextColor(100);
         doc.text(`Contact: ${s.resortPhone || '+91 9944033765'}`, 73, y, { align: 'center' }); y += 4;
-        if (s.resortGSTIN) {
+        if (enableGST && s.resortGSTIN) {
           doc.text(`GSTIN: ${s.resortGSTIN}`, 73, y, { align: 'center' }); y += 4;
         }
         doc.setTextColor(0);

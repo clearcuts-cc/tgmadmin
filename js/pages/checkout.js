@@ -239,7 +239,7 @@
                 <h1 class="rb-resort-name" style="margin: 0; line-height: 1.2;">${s.resortName || 'THE GRAND MIST'}</h1>
                 <p class="rb-resort-sub" style="margin: 0.25rem 0 0; opacity: 0.8;">${s.resortAddress || 'KODAIKANAL, DINDIGUL'} · ${stars}</p>
                 <div style="font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; color: #333;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
-                ${s.resortGSTIN ? `<div style="font-size: 0.8rem; font-weight: 600; margin-top: 0.15rem; color: #444;">GSTIN: ${s.resortGSTIN}</div>` : ''}
+                ${(enableGST && s.resortGSTIN) ? `<div style="font-size: 0.8rem; font-weight: 600; margin-top: 0.15rem; color: #444;">GSTIN: ${s.resortGSTIN}</div>` : ''}
               </div>
 
               <div class="rb-divider-full"></div>

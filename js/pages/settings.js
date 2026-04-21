@@ -390,7 +390,7 @@
               <input type="text" id="resortEmail" value="${s.resortEmail}">
             </div>
 
-            <div class="settings-field">
+            <div class="settings-field gst-controlled-field">
               <label for="resortGSTIN">GSTIN Number</label>
               <input type="text" id="resortGSTIN" value="${s.resortGSTIN}" placeholder="e.g. 33XXXXX1234X1ZX">
             </div>
@@ -447,12 +447,12 @@
               <input type="text" id="billPrefix" value="${s.billPrefix}">
             </div>
 
-            <div class="settings-field">
+            <div class="settings-field gst-controlled-field">
               <label for="roomGST">Room GST (%)</label>
               <input type="number" id="roomGST" value="${s.roomGST}" min="0" max="100">
             </div>
 
-            <div class="settings-field">
+            <div class="settings-field gst-controlled-field">
               <label for="foodGST">Food GST (%)</label>
               <input type="number" id="foodGST" value="${s.foodGST}" min="0" max="100">
             </div>
@@ -676,10 +676,21 @@
       });
     });
 
+    const toggleGstFields = (show) => {
+      document.querySelectorAll('.gst-controlled-field').forEach(el => {
+        el.style.display = show ? 'flex' : 'none';
+      });
+    };
+
     document.getElementById('enableGST')?.addEventListener('change', (e) => {
-      window.GMSettings.update('enableGST', e.target.checked);
-      GM.toast(`GST Calculations turned ${e.target.checked ? 'ON' : 'OFF'}`, 'info');
+      const show = e.target.checked;
+      window.GMSettings.update('enableGST', show);
+      toggleGstFields(show);
+      GM.toast(`GST Calculations turned ${show ? 'ON' : 'OFF'}`, 'info');
     });
+
+    // Initial state
+    toggleGstFields(s.enableGST);
 
     document.getElementById('clear-dummy-btn')?.addEventListener('click', () => {
       GM.confirm('WIPE ALL DATA?', 

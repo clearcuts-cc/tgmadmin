@@ -6,7 +6,7 @@
 (function () {
 
     /* ── SESSION ───────────────────────────────────────────── */
-    const sessionRaw = localStorage.getItem('gm_session');
+    const sessionRaw = window.GMCookieStorage ? window.GMCookieStorage.getItem('gm_session') : localStorage.getItem('gm_session');
     if (!sessionRaw) { window.location.replace('login.html'); return; }
     const session = JSON.parse(sessionRaw);
 
@@ -46,11 +46,13 @@
         if (window.GM) {
             GM.confirm('Log Out', 'Are you sure you want to log out of the admin panel?', async () => {
                 await window.supabaseClient.auth.signOut();
+                if (window.GMCookieStorage) window.GMCookieStorage.removeItem('gm_session');
                 localStorage.removeItem('gm_session');
                 window.location.replace('login.html');
             }, 'Log Out', false);
         } else {
             window.supabaseClient.auth.signOut().then(() => {
+                if (window.GMCookieStorage) window.GMCookieStorage.removeItem('gm_session');
                 localStorage.removeItem('gm_session');
                 window.location.replace('login.html');
             });
