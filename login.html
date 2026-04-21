@@ -76,9 +76,8 @@
     passToggle.addEventListener('click', () => {
       const t = passEl.type === 'password';
       passEl.type = t ? 'text' : 'password';
-      // Use clean eye symbol
-      passToggle.innerHTML = t ? '👁' : '✕';
-      passToggle.style.opacity = t ? '1' : '0.6';
+      // Unified symbols
+      passToggle.innerHTML = t ? '👁️' : '🙈';
     });
 
     // Toast helper (standalone for auth page)

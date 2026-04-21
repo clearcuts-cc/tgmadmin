@@ -109,6 +109,14 @@
 }
 .btn-cancel-emp:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
 
+.pass-toggle-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: rgba(255,255,255,0.3);
+  cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  padding: 4px; transition: color 0.2s; z-index: 10;
+}
+.pass-toggle-btn:hover { color: var(--gold-bright); }
+
 /* employees table */
 .emp-table-wrap {
   background: rgba(255,255,255,0.02);
@@ -274,7 +282,10 @@
           </div>
           <div class="emp-form-field">
             <label for="emp-pass-inp">Temporary Password</label>
-            <input type="password" id="emp-pass-inp" placeholder="Min 6 characters" autocomplete="new-password">
+            <div style="position:relative;">
+              <input type="password" id="emp-pass-inp" placeholder="Min 6 characters" autocomplete="new-password" style="padding-right: 2.8rem;">
+              <button type="button" class="pass-toggle-btn" id="emp-pass-toggle" title="Toggle visibility">👁️</button>
+            </div>
           </div>
           <div class="emp-form-field">
             <label for="emp-role-inp">Access Level / Role</label>
@@ -300,6 +311,19 @@
     document.getElementById('emp-cancel-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
     document.getElementById('emp-submit-btn').addEventListener('click', submitEmployee);
+    
+    // Toggle Visibility
+    const passInp = document.getElementById('emp-pass-inp');
+    const passToggle = document.getElementById('emp-pass-toggle');
+    if (passInp && passToggle) {
+      passToggle.addEventListener('click', () => {
+        const isPass = passInp.type === 'password';
+        passInp.type = isPass ? 'text' : 'password';
+        passToggle.textContent = isPass ? '🙈' : '👁️';
+        passToggle.style.color = isPass ? 'var(--gold-bright)' : 'rgba(255,255,255,0.3)';
+      });
+    }
+
     setTimeout(() => document.getElementById('emp-name-inp')?.focus(), 100);
   }
 
