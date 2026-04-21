@@ -136,7 +136,7 @@
     const room = { id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night, status: r.status };
 
     const st = MockData.getRoomStatus(room.id, viewDate);
-    const booking = MockData.bookings.find(b => b.roomId === roomId && b.status !== 'cancelled' && viewDate >= b.checkIn && viewDate <= b.checkOut);
+    const booking = MockData.bookings.find(b => b.roomId === roomId && !['cancelled', 'checked_out'].includes(b.status) && viewDate >= b.checkIn && viewDate <= b.checkOut);
     const isMaint = st === 'maintenance';
 
     document.getElementById('panel-room-num').textContent = `Room ${room.number}`;
@@ -169,6 +169,7 @@
           <div class="detail-row"><span class="detail-row__label">Dates</span><span class="detail-row__value" style="font-size:0.8rem;">${GM.fmt.date(booking.checkIn)} - ${GM.fmt.date(booking.checkOut)}</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:0.45rem;margin-top:1.25rem;">
+          ${st === 'confirmed' ? `<a href="#checkin?roomId=${room.id}" class="btn btn--blue">Check-in Guest</a>` : ''}
           <a href="#booking-detail?booking=${booking.id}" class="btn btn--primary">View Booking Details</a>
           <button class="btn btn--danger btn--sm" id="quick-cancel-btn" style="margin-top:0.25rem;">No Show / Cancel</button>
         </div>`;

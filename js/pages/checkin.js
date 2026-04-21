@@ -17,76 +17,114 @@
   }
 
   async function renderRoomSelector() {
+    let viewDate = GMRouteParam('date') || MockData.TODAY;
+    
     const cRooms = await window.RoomCache.getRooms();
     const rooms = cRooms.map(r => ({ id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night, status: r.status }));
+    
     const STATUS_META = {
       available: { icon: '🌿', label: 'Available' },
       confirmed: { icon: '🔵', label: 'Confirmed' },
       occupied: { icon: '🔴', label: 'Occupied' },
       due_checkout: { icon: '⏰', label: 'Due Checkout' },
       maintenance: { icon: '🔧', label: 'Maintenance' },
+      checked_out: { icon: '⚪', label: 'Checked Out' }
     };
 
     main.innerHTML = `
         <div class="page-header animate-in">
-          <h1>Check-in — Select Room</h1>
-          <p>Click a <strong style="color:var(--blue)">confirmed</strong> room to begin the check-in process</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+            <div>
+              <h1>Check-in — Select Room</h1>
+              <p>Click a <strong style="color:var(--blue)">confirmed</strong> room to begin the check-in process</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);padding:0.5rem;border-radius:var(--radius-sm);border:1px solid var(--border);">
+               <button class="btn btn--sm btn--ghost" id="date-prev">←</button>
+               <input type="date" id="checkin-date" value="${viewDate}" class="form-input" style="width:140px;border:none;background:transparent;text-align:center;font-weight:600;">
+               <button class="btn btn--sm btn--ghost" id="date-next">→</button>
+            </div>
+          </div>
         </div>
         <div class="page-content">
-          <div class="status-legend animate-in" style="margin-bottom:1.25rem;">
+          <div class="status-legend animate-in" style="margin-bottom:1.5rem;">
             <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Confirmed — click to check in</div>
-            <div class="legend-item" style="opacity:0.5;"><div class="legend-dot" style="background:var(--red)"></div> Occupied — already checked in</div>
-            <div class="legend-item" style="opacity:0.5;"><div class="legend-dot" style="background:var(--green)"></div> Available — no booking</div>
-            <div class="legend-item" style="opacity:0.5;"><div class="legend-dot" style="background:var(--orange)"></div> Due Checkout</div>
-            <div class="legend-item" style="opacity:0.5;"><div class="legend-dot" style="background:var(--purple)"></div> Maintenance</div>
+            <div class="legend-item" style="opacity:0.8;"><div class="legend-dot" style="background:var(--red)"></div> Occupied</div>
+            <div class="legend-item" style="opacity:0.8;"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
+            <div class="legend-item" style="opacity:0.8;"><div class="legend-dot" style="background:var(--orange)"></div> Due Checkout</div>
+            <div class="legend-item" style="opacity:0.8;"><div class="legend-dot" style="background:var(--gray)"></div> Checked Out</div>
           </div>
           <div class="room-grid animate-in" id="checkin-room-grid"></div>
         </div>`;
 
     const grid = document.getElementById('checkin-room-grid');
+    const dateInput = document.getElementById('checkin-date');
 
-    const TODAY_STR = new Date().toISOString().split('T')[0];
+    const updateView = (newDate) => {
+        window.location.hash = `#checkin?date=${newDate}`;
+    };
 
-    grid.innerHTML = rooms.map(room => {
-      const st = MockData.getRoomStatus(room.id);
-      const meta = STATUS_META[st] || STATUS_META.available;
-      const booking = MockData.getActiveBookingForRoom(room.id);
-      // Only show as check-in-ready if booking is confirmed AND check-in date is today or before
-      const isActive = st === 'confirmed' && booking && booking.checkIn <= TODAY_STR;
-      const dimmed = !isActive;
+    dateInput.addEventListener('change', (e) => updateView(e.target.value));
+    document.getElementById('date-prev').addEventListener('click', () => {
+        const d = new Date(viewDate);
+        d.setDate(d.getDate() - 1);
+        updateView(d.toISOString().split('T')[0]);
+    });
+    document.getElementById('date-next').addEventListener('click', () => {
+        const d = new Date(viewDate);
+        d.setDate(d.getDate() + 1);
+        updateView(d.toISOString().split('T')[0]);
+    });
 
-      const guestLine = (isActive && booking)
-        ? `<div style="margin-top:0.5rem;font-size:0.78rem;color:var(--blue);font-weight:500;">${booking.guestName}</div>
-                   <div style="font-size:0.72rem;color:var(--text-muted);">In: ${GM.fmt.date(booking.checkIn)}</div>`
-        : '';
+    // Sort rooms by number so the board is intuitive
+    const sortedRooms = [...rooms].sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, {numeric: true}));
 
-      return `
-          <div class="room-card room-card--${st} ${isActive ? 'room-card--checkin-active' : 'room-card--dimmed'}"
-               data-room-id="${room.id}"
-               ${isActive ? `role="button" tabindex="0" aria-label="Check in Room ${room.number} — ${booking ? booking.guestName : ''}"` : 'aria-disabled="true"'}>
-            <div class="room-card__icon">${meta.icon}</div>
-            <div class="room-card__number">${room.number}</div>
-            <div class="room-card__type">${room.type}</div>
-            <div class="room-card__badge">${GM.statusBadge(st)}</div>
-            <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted);">
-              ${GM.fmt.currency(room.rate)}<span style="opacity:0.6"> / night</span>
-            </div>
-            ${guestLine}
-            ${isActive ? `<div style="margin-top:0.6rem;font-size:0.72rem;color:var(--blue);font-weight:600;letter-spacing:0.06em;">TAP TO CHECK IN ›</div>` : ''}
-          </div>`;
+    grid.innerHTML = sortedRooms.map(room => {
+        const st = MockData.getRoomStatus(room.id, viewDate);
+        const meta = STATUS_META[st] || STATUS_META.available;
+        const booking = MockData.getActiveBookingForRoom(room.id, viewDate);
+        
+        // Active for check-in: confirmed or due_checkout with a guest arriving on this date
+        const isActive = (st === 'confirmed' || st === 'due_checkout') && booking && booking.checkIn <= viewDate;
+        
+        const guestLine = (booking)
+          ? `<div style="margin-top:0.6rem;font-size:0.78rem;color:var(--blue);font-weight:500;">${booking.guestName}</div>
+             <div style="font-size:0.7rem;color:var(--text-muted);opacity:0.8;">In: ${GM.fmt.date(booking.checkIn)}</div>`
+          : '';
+
+        return `
+            <div class="room-card room-card--${st} ${isActive ? 'room-card--checkin-active room-card--checkin-clickable' : 'room-card--dimmed'}"
+                 data-room-id="${room.id}"
+                 ${isActive ? `role="button" tabindex="0" aria-label="Check in Room ${room.number}"` : 'aria-disabled="true"'}>
+              <div class="room-card__icon" style="opacity:0.4">${meta.icon}</div>
+              <div class="room-card__number">${room.number}</div>
+              <div class="room-card__type">${room.type}</div>
+              <div class="room-card__badge">${GM.statusBadge(st)}</div>
+              <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted);opacity:0.7;">
+                ${GM.fmt.currency(room.rate)}<span style="opacity:0.6"> / night</span>
+              </div>
+              ${guestLine}
+              ${isActive ? `<div style="margin-top:0.6rem;font-size:0.72rem;color:var(--blue);font-weight:600;letter-spacing:0.06em;">TAP TO CHECK IN ›</div>` : ''}
+            </div>`;
     }).join('');
 
-    // Only attach click to confirmed rooms
-    grid.querySelectorAll('.room-card--checkin-active').forEach(card => {
+    // Only attach click to ACTIVE check-in rooms
+    grid.querySelectorAll('.room-card--checkin-clickable').forEach(card => {
       const roomId = card.dataset.roomId;
       card.addEventListener('click', () => {
         window.location.hash = `#checkin?roomId=${roomId}`;
       });
-      card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') window.location.hash = `#checkin?roomId=${roomId}`;
-      });
     });
   }
+
+  // Real-time listener
+  const onDataChange = () => {
+     if (!GMRouteParam('roomId') && !GMRouteParam('booking')) renderRoomSelector();
+  };
+  window.addEventListener('gm:data-change', onDataChange);
+
+  window.__gmPageCleanup = () => {
+    window.removeEventListener('gm:data-change', onDataChange);
+  };
 
   /* ══════════════════════════════════════════════════════════
    * VIEW 2 — Check-in Process Form
@@ -326,6 +364,10 @@
             GM.toast(successMsg, 'success');
           } catch (err) {
             console.error('Check-in error:', err);
+            GM.toast('Check-in failed. Please try again.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '✔ Collect Payment & Confirm Check-in';
+            return;
           } finally {
             GM.btnLoading(btn, false);
           }

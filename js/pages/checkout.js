@@ -16,6 +16,8 @@
   }
 
   async function renderRoomSelector() {
+    let viewDate = GMRouteParam('date') || MockData.TODAY;
+
     const cRooms = await window.RoomCache.getRooms();
     const rooms = cRooms.map(r => ({ id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night, status: r.status }));
     const STATUS_META = {
@@ -29,8 +31,17 @@
 
     main.innerHTML = `
         <div class="page-header animate-in">
-          <h1>Check-out — Select Room</h1>
-          <p>Click an <strong style="color:var(--red)">occupied</strong> or <strong style="color:var(--orange)">due checkout</strong> room to view the final bill</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;">
+            <div>
+              <h1>Check-out — Select Room</h1>
+              <p>Click an <strong style="color:var(--red)">occupied</strong> or <strong style="color:var(--orange)">due checkout</strong> room to view the final bill</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);padding:0.5rem;border-radius:var(--radius-sm);border:1px solid var(--border);">
+               <button class="btn btn--sm btn--ghost" id="date-prev">←</button>
+               <input type="date" id="checkout-date" value="${viewDate}" class="form-input" style="width:140px;border:none;background:transparent;text-align:center;font-weight:600;">
+               <button class="btn btn--sm btn--ghost" id="date-next">→</button>
+            </div>
+          </div>
         </div>
         <div class="page-content">
           <div class="status-legend animate-in" style="margin-bottom:1.25rem;">
@@ -44,8 +55,28 @@
         </div>`;
 
     const grid = document.getElementById('checkout-room-grid');
-    grid.innerHTML = rooms.map(room => {
-      const st = MockData.getRoomStatus(room.id);
+    const dateInput = document.getElementById('checkout-date');
+
+    const updateView = (newDate) => {
+        window.location.hash = `#checkout?date=${newDate}`;
+    };
+
+    dateInput.addEventListener('change', (e) => updateView(e.target.value));
+    document.getElementById('date-prev').addEventListener('click', () => {
+        const d = new Date(viewDate);
+        d.setDate(d.getDate() - 1);
+        updateView(d.toISOString().split('T')[0]);
+    });
+    document.getElementById('date-next').addEventListener('click', () => {
+        const d = new Date(viewDate);
+        d.setDate(d.getDate() + 1);
+        updateView(d.toISOString().split('T')[0]);
+    });
+
+    const sortedRooms = [...rooms].sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, {numeric: true}));
+
+    grid.innerHTML = sortedRooms.map(room => {
+      const st = MockData.getRoomStatus(room.id, viewDate);
       const meta = STATUS_META[st] || STATUS_META.available;
       const booking = MockData.getActiveBookingForRoom(room.id);
       const isActive = ACTIVE.has(st);
@@ -367,7 +398,7 @@
               <div class="rb-divider-full"></div>
 
               <div class="rb-balance-row" id="balance-row">
-                <span class="rb-balance-label">Balance Due Now</span>
+                <span class="rb-balance-label" id="balance-label">Balance Due Now</span>
                 <span class="rb-balance-amount" id="balance-due-display">₹0</span>
               </div>
 
@@ -548,7 +579,7 @@
       // Unpaid food orders contribution
       const unpaidFoodTotal = bookingOrders.filter(o => o.paymentStatus !== 'paid').reduce((s, o) => s + o.total, 0);
 
-      const currentNetTotal = Math.max(0, roomBal + unpaidFoodTotal + totalExtraDue - disc);
+      const currentNetTotal = roomBal + unpaidFoodTotal + totalExtraDue - disc;
       if (grandDisplay) grandDisplay.textContent = GM.fmt.currency(currentNetTotal);
 
       // Visibility toggles for adjustments
@@ -557,8 +588,17 @@
       const discRow = document.getElementById('rb-discount-row');
       if (discRow) discRow.style.display = disc > 0 ? 'flex' : 'none';
 
-      const balance = Math.max(0, currentNetTotal - paidNow);
-      if (balanceEl) balanceEl.textContent = GM.fmt.currency(balance);
+      const balance = currentNetTotal - paidNow;
+      if (balanceEl) {
+          balanceEl.textContent = GM.fmt.currency(Math.abs(balance));
+          if (balance < 0) {
+              balanceEl.style.color = 'var(--blue)';
+              document.getElementById('balance-label').textContent = 'Refund to Guest';
+          } else {
+              balanceEl.style.color = '';
+              document.getElementById('balance-label').textContent = 'Balance Due Now';
+          }
+      }
       if (balanceRow) balanceRow.className = 'rb-balance-row' + (balance > 0 ? ' rb-balance-row--due' : '');
 
       const hiddenEc = document.getElementById('extra-charges');

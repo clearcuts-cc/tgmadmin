@@ -167,7 +167,7 @@
               <div class="form-grid form-grid--2">
                 <div class="form-group">
                   <label class="form-label" for="adults">Adults <span class="req">*</span></label>
-                  <input class="form-input" type="number" id="adults" min="1" max="10" value="1" required>
+                  <input class="form-input" type="number" id="adults" min="1" max="10" value="2" required>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="children">Children</label>
@@ -477,7 +477,7 @@
       const checkInTime = document.getElementById('checkInTime').value;
       const checkOut = document.getElementById('checkOutDate').value;
       const checkOutTime = document.getElementById('checkOutTime').value;
-      const adults = parseInt(document.getElementById('adults').value) || 1;
+      const adults = parseInt(document.getElementById('adults').value) || 2;
       const children = parseInt(document.getElementById('children').value) || 0;
       const special = document.getElementById('specialRequests')?.value?.trim() || '';
       const advancePaid = document.getElementById('advanceToggle').checked

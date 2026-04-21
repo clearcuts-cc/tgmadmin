@@ -245,7 +245,7 @@ const MockData = (() => {
         
         const ACTIVE = ['due_checkout', 'checked_in', 'confirmed'];
         const booking = _cache.bookings
-            .filter(b => b.roomId === roomId && b.status !== 'cancelled' && date >= b.checkIn && date <= b.checkOut)
+            .filter(b => b.roomId === roomId && !['cancelled', 'checked_out'].includes(b.status) && date >= b.checkIn && date <= b.checkOut)
             .sort((a, b) => {
                 // Priority: checked_in > confirmed
                 const pA = a.status === 'checked_in' || a.status === 'due_checkout' ? 0 : 1;
@@ -366,7 +366,10 @@ const MockData = (() => {
             if (Object.keys(dbUpdates).length) {
                 try {
                     const { error } = await db().from('guests').update(dbUpdates).eq('id', id);
-                    if (error) console.error('updateGuest error:', error);
+                    if (error) {
+                    console.error('updateGuest error:', error);
+                    throw error;
+                }
                 } catch (err) {
                     console.error('updateGuest exception:', err);
                 }
@@ -470,9 +473,11 @@ const MockData = (() => {
                 if (error) {
                     console.error('updateBookingStatus error:', error);
                     GM.toast('Failed to update booking status', 'error');
+                    throw error;
                 }
             } catch (err) {
                 console.error('updateBookingStatus exception:', err);
+                throw err;
             }
         },
         async cancelBooking(bookingId, reason) {
