@@ -24,7 +24,7 @@
 
     <!-- ── SESSION CHECK (Supabase Auth) ─────────────────────── -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-client.js"></script>
+    <script src="js/core/supabase-client.js"></script>
     <script>
         (async function () {
             // Check Supabase session first, fall back to localStorage
@@ -130,10 +130,10 @@
 
     <!-- ── DATA + UTILS ──────────────────────────────────────── -->
     <script src="js/room-cache.js"></script>
-    <script src="mockdata.js"></script>
+    <script src="js/core/mockdata.js"></script>
     <script src="js/notifications.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-    <script src="utils.js"></script>
+    <script src="js/core/utils.js"></script>
 
     <!-- ── NAV + ROUTER (after MockData.init()) ───────────────── -->
     <script src="js/components/nav.js"></script>
