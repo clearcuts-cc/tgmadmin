@@ -561,6 +561,7 @@ const MockData = (() => {
                 room: order.room || '', items: order.items || [],
                 total: Number(order.total) || 0, status: order.status || 'pending',
                 createdAt: order.createdAt || new Date().toISOString(),
+                paymentStatus: order.paymentStatus || 'unpaid'
             };
 
             try {
@@ -578,6 +579,24 @@ const MockData = (() => {
                 }
             } catch (err) {
                 console.error('addOrder exception:', err);
+            }
+        },
+        async updateOrder(orderId, updates) {
+            try {
+                const { error } = await db().from('orders').update(updates).eq('id', orderId);
+                if (error) {
+                    console.error('updateOrder error:', error);
+                    GM.toast('Failed to update order in cloud', 'error');
+                    return false;
+                } else {
+                    const idx = _cache.orders.findIndex(o => o.id === orderId);
+                    if (idx !== -1) _cache.orders[idx] = { ..._cache.orders[idx], ...updates };
+                    GM.toast('Order updated successfully', 'success');
+                    return true;
+                }
+            } catch (err) {
+                console.error('updateOrder exception:', err);
+                return false;
             }
         },
         async updateOrderStatus(orderId, status) {

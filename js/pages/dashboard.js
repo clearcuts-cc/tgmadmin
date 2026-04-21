@@ -95,7 +95,7 @@
               <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
                 <div>
                   <div style="font-size:0.88rem;font-weight:500;">${b.guestName}</div>
-                  <div style="font-size:0.75rem;color:var(--text-muted);">Room ${b.roomNumber}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Room ${GM.fmt.room(b.roomNumber)}</div>
                 </div>
                 <a href="#checkin?booking=${b.id}" class="btn btn--sm btn--teal">Check-in</a>
               </div>`).join('')}
@@ -108,7 +108,7 @@
               <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
                 <div>
                   <div style="font-size:0.88rem;font-weight:500;">${b.guestName}</div>
-                  <div style="font-size:0.75rem;color:var(--text-muted);">Room ${b.roomNumber}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Room ${GM.fmt.room(b.roomNumber)}</div>
                 </div>
                 <a href="#checkout?booking=${b.id}" class="btn btn--sm btn--ghost">Check-out</a>
               </div>`).join('')}
@@ -129,7 +129,7 @@
       const colors = { available: 'var(--green)', occupied: 'var(--red)', confirmed: 'var(--blue)', due_checkout: 'var(--orange)', maintenance: 'var(--purple)' };
       return `
               <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
-                <div style="width:36px;height:36px;background:var(--bg-raised);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-display);font-weight:600;font-size:0.9rem;border:1px solid ${colors[st] || 'var(--border)'};color:${colors[st] || 'var(--text-secondary)'};">${room.number}</div>
+                <div style="width:auto;min-width:36px;height:36px;padding:0 6px;background:var(--bg-raised);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-display);font-weight:600;font-size:0.8rem;border:1px solid ${colors[st] || 'var(--border)'};color:${colors[st] || 'var(--text-secondary)'};">${GM.fmt.room(room.number)}</div>
                 <div style="flex:1;min-width:0;">
                   <div style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${room.type}</div>
                   ${booking ? `<div style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${booking.guestName}</div>` : `<div style="font-size:0.72rem;color:var(--text-muted);">${GM.fmt.currency(room.rate)}/night</div>`}
@@ -158,7 +158,7 @@
         : [...bookings].reverse().slice(0, 6).map(b => `
                   <tr>
                     <td style="font-weight:500;">${b.guestName}</td>
-                    <td>Room ${b.roomNumber}</td>
+                    <td>Room ${GM.fmt.room(b.roomNumber)}</td>
                     <td>${GM.statusBadge(b.status)}</td>
                     <td><a href="#booking-detail?booking=${b.id}" class="btn btn--sm btn--ghost">→</a></td>
                   </tr>`).join('')}

@@ -89,7 +89,7 @@
                data-room-id="${room.id}"
                ${isActive ? `role="button" tabindex="0"` : 'aria-disabled="true"'}>
             <div class="room-card__icon">${meta.icon}</div>
-            <div class="room-card__number">${room.number}</div>
+            <div class="room-card__number">${GM.fmt.room(room.number)}</div>
             <div class="room-card__type">${room.type}</div>
             <div class="room-card__badge">${GM.statusBadge(st)}</div>
             <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted);">
@@ -252,7 +252,7 @@
                 </div>
                 <div class="rb-info-col">
                   <span class="rb-info-label">ROOM</span>
-                  <span class="rb-info-value">${booking.roomNumber} — ${room.type}</span>
+                  <span class="rb-info-value">${GM.fmt.room(booking.roomNumber)} — ${room.type}</span>
                 </div>
               </div>
 

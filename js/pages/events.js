@@ -328,19 +328,32 @@
         <!-- Right: Add Registration -->
         <div>
           <div class="card animate-in">
-            <h3 style="margin-bottom:0.75rem;">＋ Add Registration</h3>
             <div class="form-group">
-              <label class="form-label" for="reg-guest">Guest Name <span class="req">*</span></label>
-              <select class="form-select" id="reg-guest">
-                <option value="">— Select guest —</option>
-                ${guestOptions}
-                <option value="__custom__">Other (type below)</option>
+              <label class="form-label">Guest Type</label>
+              <div style="display:flex;gap:1.5rem;margin-top:0.25rem;">
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;cursor:pointer;">
+                  <input type="radio" name="reg-type" value="inner" checked style="accent-color:var(--gold-bright);"> Resident Guest
+                </label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;cursor:pointer;">
+                  <input type="radio" name="reg-type" value="outer" style="accent-color:var(--gold-bright);"> Outer Guest
+                </label>
+              </div>
+            </div>
+
+            <!-- Resident: Room Selector -->
+            <div class="form-group" id="reg-room-group">
+              <label class="form-label" for="reg-room">Select Active Room <span class="req">*</span></label>
+              <select class="form-select" id="reg-room">
+                <option value="">— Select room —</option>
               </select>
             </div>
-            <div class="form-group" id="custom-name-group" style="display:none;">
-              <label class="form-label" for="reg-custom-name">Custom Name</label>
-              <input class="form-input" type="text" id="reg-custom-name" placeholder="Guest full name">
+
+            <!-- Outer Guest: Name Input -->
+            <div class="form-group" id="reg-name-group" style="display:none;">
+              <label class="form-label" for="reg-name">Guest Name <span class="req">*</span></label>
+              <input class="form-input" type="text" id="reg-name" placeholder="Guest full name">
             </div>
+
             <div class="form-group">
               <label class="form-label" for="reg-num">Number of Guests <span class="req">*</span></label>
               <input class="form-input" type="number" id="reg-num" min="1" max="${event.maxCapacity}" value="1">
@@ -367,15 +380,22 @@
         const servicesTotal = (event.services || []).reduce((s, svc) => s + svc.amount, 0);
         const rowTotal = r.numGuests * (event.price + servicesTotal);
         const serviceNames = (event.services || []).map(s => s.name).join(', ');
+        const isOuter = r.isOuter;
         return `
       <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
         <div style="width:32px;height:32px;background:var(--blue-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:0.85rem;font-weight:600;flex-shrink:0;">${r.numGuests}</div>
         <div style="flex:1;">
-          <div style="font-size:0.9rem;font-weight:500;">${r.guestName}</div>
+          <div style="font-size:0.9rem;font-weight:500;">
+            ${r.guestName}
+            ${r.roomNumber ? `<span style="font-size:0.75rem;color:var(--gold-bright);margin-left:6px;">(Room ${GM.fmt.room(r.roomNumber)})</span>` : '<span style="font-size:0.75rem;color:var(--text-muted);margin-left:6px;">(Outer Guest)</span>'}
+          </div>
           ${serviceNames ? `<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);">${serviceNames}</div>` : ''}
         </div>
-        <div style="font-size:0.82rem;color:var(--gold-bright);font-weight:600;">${GM.fmt.currency(rowTotal)}</div>
-        <button class="btn btn--sm btn--danger btn--icon" onclick="GMEvRegRemove(${i})">✕</button>
+        <div style="font-size:0.82rem;color:var(--gold-bright);font-weight:600;margin-right:0.5rem;">${GM.fmt.currency(rowTotal)}</div>
+        <div style="display:flex;gap:0.4rem;">
+            <button class="btn btn--sm btn--ghost btn--icon" title="Print Bill" onclick="GMEvRegPrint('${eventId}', ${i})">⎙</button>
+            <button class="btn btn--sm btn--danger btn--icon" onclick="GMEvRegRemove(${i})">✕</button>
+        </div>
       </div>`;
       }).join('');
     }
@@ -408,27 +428,63 @@
     numInput.addEventListener('input', updatePreview);
     updatePreview();
 
-    document.getElementById('reg-guest').addEventListener('change', function () {
-      document.getElementById('custom-name-group').style.display = this.value === '__custom__' ? 'block' : 'none';
+    // Populate active rooms
+    const activeRoomsSelect = document.getElementById('reg-room');
+    const activeBookings = MockData.bookings.filter(b => b.status === 'checked_in' || b.status === 'due_checkout');
+    activeBookings.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = `Room ${GM.fmt.room(b.roomNumber)} — ${b.guestName}`;
+      activeRoomsSelect.appendChild(opt);
     });
 
+    const regTypeRadios = document.querySelectorAll('input[name="reg-type"]');
+    const roomGrp = document.getElementById('reg-room-group');
+    const nameGrp = document.getElementById('reg-name-group');
+
+    regTypeRadios.forEach(r => r.addEventListener('change', function() {
+      const isInner = this.value === 'inner';
+      roomGrp.style.display = isInner ? 'block' : 'none';
+      nameGrp.style.display = isInner ? 'none' : 'block';
+    }));
+
     document.getElementById('add-reg-btn').addEventListener('click', () => {
-      const sel = document.getElementById('reg-guest').value;
-      const name = sel === '__custom__' ? document.getElementById('reg-custom-name').value.trim() : sel;
+      const isInner = document.querySelector('input[name="reg-type"]:checked').value === 'inner';
+      let name, roomNum, bookingId;
+
+      if (isInner) {
+          bookingId = activeRoomsSelect.value;
+          if (!bookingId) { GM.toast('Select a room.', 'error'); return; }
+          const b = MockData.getBookingById(bookingId);
+          name = b.guestName;
+          roomNum = b.roomNumber;
+      } else {
+          name = document.getElementById('reg-name').value.trim();
+          if (!name) { GM.toast('Enter guest name.', 'error'); return; }
+          roomNum = null;
+          bookingId = null;
+      }
+
       const num = parseInt(numInput.value) || 1;
-      if (!name) { GM.toast('Select or enter a guest name.', 'error'); return; }
       if (totalGuests() + num > event.maxCapacity) {
         GM.toast(`Not enough capacity. Only ${event.maxCapacity - totalGuests()} spots remain.`, 'error'); return;
       }
+
       const btn = document.getElementById('add-reg-btn');
       GM.btnLoading(btn, true);
+
       (async () => {
-        registrations.push({ guestName: name, numGuests: num });
+        registrations.push({ 
+          guestName: name, 
+          numGuests: num, 
+          roomNumber: roomNum, 
+          bookingId: bookingId,
+          isOuter: !isInner 
+        });
         persistRegistrations();
 
-        const bookingId = MockData.findActiveBookingByGuestName(name);
         if (bookingId) {
-          // Bill base event price
+          // Bill base event price to room
           await MockData.addPaymentToStay(bookingId, {
             type: 'event',
             description: `Event: ${event.name} (${num} guest${num > 1 ? 's' : ''})`,
@@ -446,17 +502,154 @@
               ref: 'Event Service'
             });
           }
-          GM.toast(`Event + services billed to ${name}'s room`, 'info');
+          GM.toast(`Event details billed to Room ${GM.fmt.room(roomNum)}`, 'info');
         }
 
         renderRegs();
-        GM.toast(`${name} registered for ${num} guest${num > 1 ? 's' : ''}!`, 'success');
-        document.getElementById('reg-guest').value = '';
+        GM.toast(`${name} registered successfully!`, 'success');
+        
+        // Reset
+        if (!isInner) document.getElementById('reg-name').value = '';
+        activeRoomsSelect.value = '';
         numInput.value = 1;
         updatePreview();
         GM.btnLoading(btn, false);
       })();
     });
+
+    /* ── PRINT EVENT BILL ────────────────────────────────── */
+    window.GMEvRegPrint = (evId, regIdx) => {
+        const ev = MockData.getEventById(evId);
+        if (!ev) return;
+        const reg = ev.registrations[regIdx];
+        if (!reg) return;
+
+        const s = window.GMSettings ? window.GMSettings.getAll() : {};
+        const servicesTotal = (ev.services || []).reduce((acc, svc) => acc + svc.amount, 0);
+        const subtotal = reg.numGuests * ev.price;
+        const total = subtotal + (reg.numGuests * servicesTotal);
+
+        const printWin = window.open('', '_blank', 'width=450,height=800');
+        printWin.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Event Bill - ${reg.guestName}</title>
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+                * { box-sizing: border-box; }
+                body { 
+                  font-family: 'Outfit', sans-serif; 
+                  color: #1a1a1a; 
+                  line-height: 1.5; 
+                  margin: 0; 
+                  padding: 40px 20px;
+                  background: #f8fafc;
+                }
+                .receipt { 
+                  background: #fff; 
+                  max-width: 450px; 
+                  margin: 0 auto; 
+                  padding: 40px;
+                  border-radius: 12px;
+                  box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+                  position: relative;
+                  overflow: hidden;
+                }
+                .receipt::before {
+                  content: "";
+                  position: absolute;
+                  top: 0; left: 0; right: 0;
+                  height: 6px;
+                  background: linear-gradient(90deg, #d4a853, #f5d17a);
+                }
+                .header { text-align: center; margin-bottom: 30px; }
+                .resort-name { font-weight: 800; font-size: 1.5rem; color: #1e293b; letter-spacing: -0.01em; margin-bottom: 4px; }
+                .resort-meta { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+                
+                .bill-title { 
+                   margin: 25px 0; padding: 12px; border-radius: 8px;
+                   background: #fafafa; border: 1px solid #f0f0f0;
+                   text-align: center; font-weight: 700; font-size: 0.85rem;
+                   color: #475569; letter-spacing: 0.2em;
+                }
+
+                .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                .meta-table td { padding: 8px 0; border-bottom: 1px dashed #f1f5f9; }
+                .label { font-size: 0.725rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+                .value { font-size: 0.9rem; font-weight: 600; color: #1e293b; text-align: right; }
+
+                .item-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; }
+                .item-main { flex: 1; }
+                .item-name { font-weight: 600; color: #1e293b; }
+                .item-sub { font-size: 0.8rem; color: #64748b; }
+                .item-total { font-weight: 700; color: #1e293b; }
+
+                .total-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #1e293b; }
+                .total-row { display: flex; justify-content: space-between; align-items: baseline; }
+                .grand-label { font-weight: 800; font-size: 1.1rem; }
+                .grand-amount { font-weight: 800; font-size: 1.8rem; color: #000; }
+
+                .footer { margin-top: 50px; text-align: center; font-size: 0.85rem; color: #94a3b8; }
+                
+                @media print {
+                  body { background: none; padding: 0; }
+                  .receipt { box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; padding: 10mm; }
+                }
+              </style>
+            </head>
+            <body onload="window.print(); window.close();">
+              <div class="receipt">
+                <div class="header">
+                  <div class="resort-name">${s.resortName || 'THE GRAND MIST'}</div>
+                  <div class="resort-meta">Event Experience · Kodaikanal</div>
+                </div>
+
+                <div class="bill-title">EVENT INVOICE</div>
+
+                <table class="meta-table">
+                  <tr><td class="label">Guest Name</td><td class="value">${reg.guestName}</td></tr>
+                  <tr><td class="label">Guest Type</td><td class="value">${reg.roomNumber ? 'Inner (Room ' + GM.fmt.room(reg.roomNumber) + ')' : 'Outer / Walk-in'}</td></tr>
+                  <tr><td class="label">Event Name</td><td class="value">${ev.name}</td></tr>
+                  <tr><td class="label">Date & Time</td><td class="value">${GM.fmt.date(ev.date)} @ ${ev.time}</td></tr>
+                  <tr><td class="label">Invoice No</td><td class="value">#EV-${Date.now().toString().slice(-6)}</td></tr>
+                </table>
+
+                <div class="item-row">
+                  <div class="item-main">
+                    <div class="item-name">${ev.name} Admission</div>
+                    <div class="item-sub">₹${ev.price} per person × ${reg.numGuests} guests</div>
+                  </div>
+                  <div class="item-total">₹${subtotal.toLocaleString()}</div>
+                </div>
+
+                ${(ev.services && ev.services.length) ? ev.services.map(svc => `
+                  <div class="item-row">
+                    <div class="item-main">
+                      <div class="item-name">${svc.name}</div>
+                      <div class="item-sub">Service Charge</div>
+                    </div>
+                    <div class="item-total">₹${(svc.amount * reg.numGuests).toLocaleString()}</div>
+                  </div>
+                `).join('') : ''}
+
+                <div class="total-section">
+                  <div class="total-row">
+                    <span class="grand-label">TOTAL AMOUNT</span>
+                    <span class="grand-amount">₹${total.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div class="footer">
+                  <p>Enjoy your experience at The Grand Mist!</p>
+                  <p style="font-size: 0.7rem; margin-top: 10px;">Generated on ${new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `);
+        printWin.document.close();
+    };
 
 
     const dGrid = document.getElementById('event-detail-grid');

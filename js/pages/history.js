@@ -142,7 +142,7 @@
               </div>
               <div class="bill-guest-info-item">
                 <div class="bill-info-label">Room</div>
-                <div class="bill-info-value">${rec.room}${rec.roomType ? ' — ' + rec.roomType : ''}</div>
+                <div class="bill-info-value">${GM.fmt.room(rec.room)}${rec.roomType ? ' — ' + rec.roomType : ''}</div>
               </div>
               <div class="bill-guest-info-item">
                 <div class="bill-info-label">Check-in</div>
@@ -251,7 +251,7 @@
         doc.setTextColor(0);
         doc.setDrawColor(180); doc.line(lm, y, lm + rw, y); y += 5;
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        doc.text(`Guest: ${activeBill.guestName}   Room: ${activeBill.room}`, lm, y); y += 5;
+        doc.text(`Guest: ${activeBill.guestName}   Room: ${GM.fmt.room(activeBill.room)}`, lm, y); y += 5;
         doc.setFont('helvetica', 'normal');
         doc.text(`Check-in: ${GM.fmt.date(activeBill.checkIn)}${activeBill.checkInTime ? ' @ ' + activeBill.checkInTime : ''}   Check-out: ${GM.fmt.date(activeBill.checkOut)}${activeBill.checkOutTime ? ' @ ' + activeBill.checkOutTime : ''} (${activeBill.nights} nights)`, lm, y); y += 7;
         doc.line(lm, y, lm + rw, y); y += 5;
@@ -348,7 +348,7 @@
               ${rec.status === 'cancelled' ? ' <span class="badge badge--gray" style="font-size:0.55rem;vertical-align:middle;padding:1px 4px;">CANCELLED</span>' : ''}
             </td>
             <td style="font-size:0.85rem;color:var(--text-secondary);">${rec.phone || '—'}</td>
-            <td><span style="background:var(--bg-raised);border-radius:4px;padding:2px 8px;font-size:0.8rem;">Room ${rec.room}</span></td>
+            <td><span style="background:var(--bg-raised);border-radius:4px;padding:2px 8px;font-size:0.8rem;">Room ${GM.fmt.room(rec.room)}</span></td>
             <td>${GM.fmt.date(rec.checkIn)} ${rec.checkInTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkInTime + '</small>' : ''}</td>
             <td>${GM.fmt.date(rec.checkOut)} ${rec.checkOutTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkOutTime + '</small>' : ''}</td>
             <td style="text-align:center;"><span style="font-family:var(--font-display);font-size:1rem;">${rec.nights}</span></td>

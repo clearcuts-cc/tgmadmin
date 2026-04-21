@@ -17,7 +17,11 @@
             <h3 style="margin-bottom:0.75rem;">Select Room / Guest</h3>
             <select class="form-select" id="room-selector">
               <option value="">— Select active room —</option>
+              <option value="walk_in">— Outer Guest (Walk-in) —</option>
             </select>
+            <div id="walkin-guest-form" style="margin-top:0.75rem;display:none;">
+              <input type="text" id="walkin-guest-name" class="form-input" placeholder="Enter Walk-in Guest Name">
+            </div>
             <div id="active-guest-info" style="margin-top:0.75rem;display:none;">
               <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-raised);border-radius:var(--radius-sm);">
                 <div class="guest-photo" style="width:40px;height:40px;font-size:1.2rem;">👤</div>
@@ -126,6 +130,7 @@
   let currentOrder = [];
   let selectedBooking = null;
   let pendingOrderTotal = 0;
+  let editingOrderId = null;
 
   // Add a listener to refresh menu if MockData changes
   window.addEventListener('gm-data-ready', refreshMenuSelect);
@@ -133,15 +138,15 @@
   // Populate active rooms from localStorage bookings
   function refreshRoomSelector() {
     const activeBookings = MockData.bookings.filter(b => b.status === 'checked_in' || b.status === 'due_checkout');
-    roomSelector.innerHTML = '<option value="">— Select active room —</option>';
+    roomSelector.innerHTML = '<option value="">— Select active room —</option><option value="walk_in">— Outer Guest (Walk-in) —</option>';
     activeBookings.forEach(b => {
       const opt = document.createElement('option');
       opt.value = b.id;
-      opt.textContent = `Room ${b.roomNumber} — ${b.guestName}`;
+      opt.textContent = `Room ${GM.fmt.room(b.roomNumber)} — ${b.guestName}`;
       roomSelector.appendChild(opt);
     });
     if (!activeBookings.length) {
-      roomSelector.innerHTML = '<option value="">No active check-ins</option>';
+      roomSelector.innerHTML = '<option value="">No active check-ins</option><option value="walk_in">— Outer Guest (Walk-in) —</option>';
     }
   }
   refreshRoomSelector();
@@ -161,16 +166,28 @@
   refreshMenuSelect();
 
   roomSelector.addEventListener('change', () => {
-    selectedBooking = MockData.getBookingById(roomSelector.value) || null;
-    if (selectedBooking) {
-      guestNameEl.textContent = selectedBooking.guestName;
-      roomInfoEl.textContent = `Room ${selectedBooking.roomNumber} · Check-out ${GM.fmt.date(selectedBooking.checkOut)}`;
-      guestInfo.style.display = 'block';
-      renderHistory(selectedBooking.id);
-    } else {
+    const val = roomSelector.value;
+    const walkinForm = document.getElementById('walkin-guest-form');
+    
+    if (val === 'walk_in') {
+      walkinForm.style.display = 'block';
       guestInfo.style.display = 'none';
+      selectedBooking = null;
+      renderHistory(null); // Clear history filter
+    } else {
+      walkinForm.style.display = 'none';
+      selectedBooking = MockData.getBookingById(val) || null;
+      if (selectedBooking) {
+        guestNameEl.textContent = selectedBooking.guestName;
+        roomInfoEl.textContent = `Room ${GM.fmt.room(selectedBooking.roomNumber)} · Check-out ${GM.fmt.date(selectedBooking.checkOut)}`;
+        guestInfo.style.display = 'block';
+        renderHistory(selectedBooking.id);
+      } else {
+        guestInfo.style.display = 'none';
+        renderHistory(null);
+      }
     }
-    placeOrderBtn.disabled = currentOrder.length === 0 || !selectedBooking;
+    placeOrderBtn.disabled = currentOrder.length === 0 || (!selectedBooking && val !== 'walk_in');
   });
 
   if (bookingParam) roomSelector.dispatchEvent(new Event('change'));
@@ -230,39 +247,62 @@
     document.getElementById('order-gst-amount').textContent = GM.fmt.currency(gstAmount);
     document.getElementById('order-gst-label').textContent = `GST (${foodGST}%)`;
     orderTotalEl.textContent = GM.fmt.currency(total);
-    placeOrderBtn.disabled = !selectedBooking;
+    
+    const val = roomSelector.value;
+    placeOrderBtn.disabled = val === "" || (val === "walk_in" && !document.getElementById('walkin-guest-name').value.trim());
+    placeOrderBtn.textContent = editingOrderId ? 'Update Order' : 'Place Order';
   }
 
   window.GMOrderQty = (i, delta) => { currentOrder[i].qty = Math.max(1, currentOrder[i].qty + delta); renderCurrentOrder(); };
   window.GMOrderRemove = (i) => { currentOrder.splice(i, 1); renderCurrentOrder(); };
   clearOrderBtn.addEventListener('click', () => { currentOrder = []; renderCurrentOrder(); });
-
   placeOrderBtn.addEventListener('click', () => {
-    if (!selectedBooking || currentOrder.length === 0) return;
+    if (currentOrder.length === 0) return;
+    
     const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
     const foodGST = enableGST ? (window.GMSettings ? window.GMSettings.get('foodGST') : 5) : 0;
     const subtotal = currentOrder.reduce((s, o) => s + o.price * o.qty, 0);
     const gstAmount = Math.round(subtotal * (foodGST / 100));
     pendingOrderTotal = subtotal + gstAmount;
 
-    GM.confirm('Place Food Order', `Confirming order total ${GM.fmt.currency(pendingOrderTotal)} for Room ${selectedBooking.roomNumber}. It will be marked as UNPAID by default.`, async () => {
-      const desc = currentOrder.map(o => `${o.name} ×${o.qty}`).join(', ');
-      const orderId = crypto.randomUUID();
+    const isWalkIn = roomSelector.value === 'walk_in';
+    const guestName = isWalkIn ? document.getElementById('walkin-guest-name').value.trim() : selectedBooking?.guestName;
+    const roomNum = isWalkIn ? 'Walk-in' : selectedBooking?.roomNumber;
 
-      await MockData.addOrder({
-        id: orderId,
-        bookingId: selectedBooking.id,
-        room: selectedBooking.roomNumber,
-        guestName: selectedBooking.guestName,
-        items: currentOrder.map(o => ({ menuId: o.menuId, name: o.name, qty: o.qty, price: o.price })),
-        total: pendingOrderTotal,
-        createdAt: new Date().toISOString(),
-        status: 'pending',
-        paymentStatus: 'unpaid'
-      });
+    if (!guestName) { GM.toast('Please enter guest name.', 'error'); return; }
 
-      GM.toast(`Order placed for ${selectedBooking.guestName} (Room ${selectedBooking.roomNumber}). Marked as UNPAID.`, 'success');
+    const confirmMsg = editingOrderId 
+        ? `Confirm updating order for ${guestName}? New total: ${GM.fmt.currency(pendingOrderTotal)}`
+        : `Confirming order total ${GM.fmt.currency(pendingOrderTotal)} for ${isWalkIn ? 'Outer Guest' : 'Room ' + roomNum}. It will be marked as UNPAID by default.`;
+
+    GM.confirm(editingOrderId ? 'Update Order' : 'Place Food Order', confirmMsg, async () => {
+      if (editingOrderId) {
+          // UPDATE MODE
+          await MockData.updateOrder(editingOrderId, {
+              items: currentOrder.map(o => ({ menuId: o.menuId, name: o.name, qty: o.qty, price: o.price })),
+              total: pendingOrderTotal
+          });
+          GM.toast(`Order updated for ${guestName}`, 'success');
+          editingOrderId = null;
+      } else {
+          // CREATE MODE
+          const orderId = crypto.randomUUID();
+          await MockData.addOrder({
+            id: orderId,
+            bookingId: selectedBooking?.id || null,
+            room: roomNum,
+            guestName: guestName,
+            items: currentOrder.map(o => ({ menuId: o.menuId, name: o.name, qty: o.qty, price: o.price })),
+            total: pendingOrderTotal,
+            createdAt: new Date().toISOString(),
+            status: 'pending',
+            paymentStatus: 'unpaid'
+          });
+          GM.toast(`Order placed for ${guestName} (${isWalkIn ? 'Outer' : 'Room ' + roomNum}). Marked as UNPAID.`, 'success');
+      }
+
       currentOrder = [];
+      if (isWalkIn) document.getElementById('walkin-guest-name').value = '';
       renderCurrentOrder();
       renderHistory(selectedBooking?.id);
     });
@@ -349,7 +389,7 @@
           <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;align-items:flex-start;">
             <div>
               <div style="font-weight:600;font-size:0.9rem;">${ord.guestName || 'Walk-in'}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted);">Room ${ord.room || '—'} · ${GM.fmt.datetime(ord.createdAt)}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">Room ${GM.fmt.room(ord.room)} · ${GM.fmt.datetime(ord.createdAt)}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
                 <div style="display:flex;gap:0.4rem;">
@@ -364,6 +404,7 @@
                 </div>
                 <div style="display:flex;gap:0.4rem;">
                   <button class="btn btn--sm btn--ghost btn--icon" title="View Items" onclick="GMViewOrder('${ord.id}')">👁</button>
+                  <button class="btn btn--sm btn--ghost btn--icon" title="Edit Order" onclick="GMEditOrder('${ord.id}')">✏️</button>
                   <button class="btn btn--sm btn--ghost btn--icon" title="Print Bill" onclick="GMPrintFoodBill('${ord.id}')" style="color:var(--gold-bright);">⎙</button>
                   ${isPending ? `<button class="btn btn--sm btn--primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="GMMarkDelivered('${ord.id}')">Mark Delivered</button>` : ''}
                 </div>
@@ -406,13 +447,50 @@
     }
   };
 
+  /* ── EDIT ORDER ────────────────────────────────────────── */
+  window.GMEditOrder = (id) => {
+    if (currentOrder.length > 0) {
+        GM.confirm('Overwrite Current Order?', 'You have items in your active order area. Loading an existing order will overwrite them. Proceed?', () => loadOrderToEdit(id));
+    } else {
+        loadOrderToEdit(id);
+    }
+  };
+
+  function loadOrderToEdit(id) {
+    const ord = MockData.orders.find(o => o.id === id);
+    if (!ord) return;
+
+    editingOrderId = id;
+    currentOrder = ord.items.map(i => ({
+        menuId: i.menuId,
+        name: i.name,
+        qty: i.qty,
+        price: i.price
+    }));
+
+    // Auto-select the room if possible
+    if (ord.bookingId) {
+        roomSelector.value = ord.bookingId;
+        roomSelector.dispatchEvent(new Event('change'));
+    } else if (ord.room === 'Walk-in') {
+        roomSelector.value = 'walk_in';
+        roomSelector.dispatchEvent(new Event('change'));
+        const walkinNameField = document.getElementById('walkin-guest-name');
+        if (walkinNameField) walkinNameField.value = ord.guestName;
+    }
+
+    renderCurrentOrder();
+    GM.toast('Order loaded for editing', 'info');
+    document.querySelector('.card:nth-child(2)').scrollIntoView({ behavior: 'smooth' });
+  }
+
   /* ── ORDER DETAIL MODAL ─────────────────────────────────── */
   window.GMViewOrder = (id) => {
     const ord = MockData.orders.find(o => o.id === id);
     if (!ord) return;
     GM.alert('Order Details', `
       <div style="margin-bottom:1rem;padding:0.75rem;background:var(--bg-raised);border-radius:var(--radius-sm);font-size:0.875rem;">
-        <div style="font-weight:600;margin-bottom:0.25rem;">${ord.guestName} (Room ${ord.room})</div>
+        <div style="font-weight:600;margin-bottom:0.25rem;">${ord.guestName} (Room ${GM.fmt.room(ord.room)})</div>
         <div style="color:var(--text-muted);font-size:0.75rem;">Placed at ${GM.fmt.datetime(ord.createdAt)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.5rem;">
@@ -597,8 +675,8 @@
 
             <div class="meta-grid">
               <div class="meta-item">
-                <span class="meta-label">Room Number</span>
-                <span class="meta-value">${ord.room}</span>
+                <span class="meta-label">${ord.room === 'Walk-in' ? 'Guest Type' : 'Room Number'}</span>
+                <span class="meta-value">${ord.room === 'Walk-in' ? '<span style="color:#2563eb;">Outer Guest</span>' : GM.fmt.room(ord.room)}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Bill ID</span>

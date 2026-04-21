@@ -230,6 +230,15 @@ const GM = (() => {
             if (id.startsWith("TGM-")) return id;
             // Shorten UUIDs for cleaner display
             return "TGM-" + String(id).substring(0, 8).toUpperCase();
+        },
+        room: (n) => {
+            if (!n) return "—";
+            let s = String(n).trim();
+            // Prefix based on floor digit
+            if (s.startsWith('1')) return 'G-' + s;
+            if (s.startsWith('2')) return 'F-' + s;
+            if (s.startsWith('3')) return 'S-' + s;
+            return s; // Fallback for other formats
         }
     };
 
