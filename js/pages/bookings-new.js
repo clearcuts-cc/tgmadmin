@@ -127,7 +127,12 @@
               <!-- Stay summary -->
               <div id="stay-summary" style="background:var(--bg-raised);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:0.75rem;display:none;">
                 <div class="bill-row"><span>Nights</span><strong id="sum-nights">—</strong></div>
-                <div class="bill-row"><span>Rate per night</span><strong id="sum-rate">—</strong></div>
+                <div class="bill-row"><span>Rate per night</span>
+                  <div style="display:flex;align-items:center;gap:0.3rem;">
+                    <span style="font-size:0.8rem;opacity:0.7;">₹</span>
+                    <input type="number" id="manual-rate" class="form-input" style="width:90px;height:28px;padding:2px 6px;text-align:right;font-weight:700;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);" placeholder="0">
+                  </div>
+                </div>
                 <div class="bill-row" style="border-top:1px dashed var(--border);margin-top:0.4rem;padding-top:0.4rem;">
                   <span>Subtotal</span><strong id="sum-subtotal">—</strong>
                 </div>
@@ -364,14 +369,23 @@
 
     if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) { summary.style.display = 'none'; return; }
     const room = rooms.find(r => r.id === roomId);
+    
+    // Manual rate logic
+    const rateInput = document.getElementById('manual-rate');
+    // If rate input is empty, set it to room's base rate
+    if (!rateInput.value) {
+      rateInput.value = room.rate;
+    }
+    
+    const rate = parseFloat(rateInput.value) || 0;
     const nights = GM.nights(checkIn, checkOut);
-    const subtotal = nights * room.rate;
+    const subtotal = nights * rate;
     const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
     const gstAmount = Math.round(subtotal * (roomGST / 100));
     const total = subtotal + gstAmount;
 
     document.getElementById('sum-nights').textContent = nights + ' nights';
-    document.getElementById('sum-rate').textContent = GM.fmt.currency(room.rate);
+    // document.getElementById('sum-rate').textContent = GM.fmt.currency(rate); // Now handled by input
     document.getElementById('sum-subtotal').textContent = GM.fmt.currency(subtotal);
     document.getElementById('sum-gst-label').textContent = `Room GST (${roomGST}%)`;
     document.getElementById('sum-gst-amount').textContent = GM.fmt.currency(gstAmount);
@@ -379,6 +393,9 @@
     summary.style.display = 'block';
     updateAdvanceSummary(total);
   }
+
+  // Add listener for manual rate change
+  document.getElementById('manual-rate').addEventListener('input', updateSummary);
 
   function updateAdvanceSummary(total) {
     const advToggle = document.getElementById('advanceToggle');
@@ -395,7 +412,11 @@
       dueRow.style.display = 'none';
     }
   }
-  roomSelect.addEventListener('change', updateSummary);
+  roomSelect.addEventListener('change', () => {
+    // When room changes, clear manual rate to let it re-init from new room
+    document.getElementById('manual-rate').value = '';
+    updateSummary();
+  });
   document.getElementById('checkInDate').addEventListener('change', updateSummary);
   document.getElementById('checkOutDate').addEventListener('change', updateSummary);
 
@@ -522,7 +543,7 @@
           specialRequests: special,
           platform: platformSelect.value || 'Direct',
           platform_comm: platformSelect.value ? (parseFloat(document.getElementById('platformCommAmt').value) || 0) : 0,
-          rate: selectedRoom ? selectedRoom.rate : 0,
+          rate: parseFloat(document.getElementById('manual-rate').value) || (selectedRoom ? selectedRoom.rate : 0),
           nights,
           advance_paid: advancePaid,
           added_by: (JSON.parse(localStorage.getItem('gm_session') || '{}')).name || null,

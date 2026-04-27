@@ -86,8 +86,12 @@
               <div class="detail-row"><span class="detail-row__label">Check-out</span><span class="detail-row__value" id="checkout-val">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''}</span></div>
               <div class="detail-row"><span class="detail-row__label">Nights</span><span class="detail-row__value" style="font-family:var(--font-display);font-size:1.1rem;">${nights}</span></div>
               <div class="detail-row"><span class="detail-row__label">Guests</span><span class="detail-row__value">${booking.adults} adults${booking.children ? ', ' + booking.children + ' children' : ''}</span></div>
-              <div class="detail-row"><span class="detail-row__label">Rate</span><span class="detail-row__value">${GM.fmt.currency(room.rate)} / night</span></div>
-              <div class="detail-row"><span class="detail-row__label">Room Total</span><span class="detail-row__value text-gold" style="font-size:1.1rem;font-family:var(--font-display);">${GM.fmt.currency(nights * room.rate)}</span></div>
+              <div class="detail-row"><span class="detail-row__label">Rate</span><span class="detail-row__value">${GM.fmt.currency(Number(booking.rate) > 0 ? booking.rate : room.rate)} / night</span></div>
+              ${booking.platform && booking.platform !== 'Direct' ? `
+                <div class="detail-row"><span class="detail-row__label">Source</span><span class="detail-row__value" style="color:var(--teal); font-weight:700;">${booking.platform}</span></div>
+                ${booking.platform_comm > 0 ? `<div class="detail-row"><span class="detail-row__label">Commission</span><span class="detail-row__value" style="color:#b45309;">${GM.fmt.currency(booking.platform_comm)}</span></div>` : ''}
+              ` : ''}
+              <div class="detail-row"><span class="detail-row__label">Room Total</span><span class="detail-row__value text-gold" style="font-size:1.1rem;font-family:var(--font-display);">${GM.fmt.currency(nights * (Number(booking.rate) > 0 ? booking.rate : room.rate))}</span></div>
               ${booking.specialRequests ? `<div class="detail-row"><span class="detail-row__label">Special Req.</span><span class="detail-row__value">${booking.specialRequests}</span></div>` : ''}
             </div>
           </div>

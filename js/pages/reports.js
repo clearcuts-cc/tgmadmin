@@ -26,7 +26,7 @@
       const k = monthKey(rec.checkIn);
       if (!k) return;
       occupancyMap[k] = (occupancyMap[k] || 0) + (rec.nights || 0);
-      revenueMap[k] = (revenueMap[k] || 0) + (rec.grandTotal || 0);
+      revenueMap[k] = (revenueMap[k] || 0) + (rec.grandTotal || 0) - (Number(rec.platform_comm) || 0);
       guestCountMap[k] = (guestCountMap[k] || 0) + 1;
     });
 
@@ -39,7 +39,7 @@
       occupancyMap[k] = (occupancyMap[k] || 0) + (stay.nights || 0);
       // For revenue, we sum their current payments
       const stayRev = stay.payments.reduce((s, p) => s + p.amount, 0);
-      revenueMap[k] = (revenueMap[k] || 0) + stayRev;
+      revenueMap[k] = (revenueMap[k] || 0) + stayRev - (Number(stay.platform_comm) || 0);
       guestCountMap[k] = (guestCountMap[k] || 0) + 1;
     });
 

@@ -55,7 +55,7 @@
 
       <div class="table-wrap animate-in">
         <table>
-          <thead><tr><th>#</th><th>Guest Name</th><th>Phone</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Grand Total</th><th>Bill No</th></tr></thead>
+          <thead><tr><th>#</th><th>Guest Name</th><th>Phone</th><th>Room</th><th>Source</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Grand Total</th><th>Bill No</th></tr></thead>
           <tbody id="history-tbody"></tbody>
         </table>
       </div>
@@ -170,12 +170,17 @@
 
             <div class="rb-total-section">
               <div class="bill-grand-total">
-                <span>Grand Total Paid</span>
+                <span>Gross Total Paid</span>
                 <span>${GM.fmt.currency(rec.grandTotal)}</span>
               </div>
+              ${Number(rec.platform_comm) > 0 ? `
+              <div class="bill-grand-total" style="color:#b45309; border-top:none; padding-top:2px;">
+                <span>${rec.platform || 'Platform'} Comm. (Deduction)</span>
+                <span>-${GM.fmt.currency(rec.platform_comm)}</span>
+              </div>` : ''}
               <div class="bill-balance">
-                <span>Balance Due</span>
-                <span>₹0 (Fully Paid)</span>
+                <span>Net Admin Balance</span>
+                <span>${GM.fmt.currency(rec.grandTotal - (Number(rec.platform_comm) || 0))}</span>
               </div>
             </div>
 
@@ -183,7 +188,7 @@
 
             <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
               <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
-              <div style="font-size: 2.2rem; font-weight: 900; color: #000;">${GM.fmt.currency(rec.grandTotal)}</div>
+              <div style="font-size: 2.2rem; font-weight: 900; color: #000;">${GM.fmt.currency(rec.grandTotal - (Number(rec.platform_comm) || 0))}</div>
                <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #000; font-weight: 600;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
              </div>
 
@@ -333,7 +338,7 @@
       });
 
       const totalNightsCount = filtered.reduce((s, r) => s + (r.nights || 0), 0);
-      const totalRevenueCount = filtered.reduce((s, r) => s + (r.grandTotal || 0), 0);
+      const totalRevenueCount = filtered.reduce((s, r) => s + (r.grandTotal || 0) - (Number(r.platform_comm) || 0), 0);
       totalStaysEl.textContent = filtered.length;
       totalNightsEl.textContent = totalNightsCount;
       totalRevEl.textContent = GM.fmt.currency(totalRevenueCount);
@@ -349,10 +354,11 @@
             </td>
             <td style="font-size:0.85rem;color:var(--text-secondary);">${rec.phone || '—'}</td>
             <td><span style="background:var(--bg-raised);border-radius:4px;padding:2px 8px;font-size:0.8rem;">Room ${GM.fmt.room(rec.room)}</span></td>
+            <td style="font-size:0.72rem;color:var(--teal);font-weight:700;">${(rec.platform || 'Direct').toUpperCase()}</td>
             <td>${GM.fmt.date(rec.checkIn)} ${rec.checkInTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkInTime + '</small>' : ''}</td>
             <td>${GM.fmt.date(rec.checkOut)} ${rec.checkOutTime ? '<br><small style="color:var(--text-muted);">@ ' + rec.checkOutTime + '</small>' : ''}</td>
             <td style="text-align:center;"><span style="font-family:var(--font-display);font-size:1rem;">${rec.nights}</span></td>
-            <td style="color:var(--gold-bright);font-weight:600;">${rec.status === 'cancelled' ? '—' : GM.fmt.currency(rec.grandTotal)}</td>
+            <td style="color:var(--gold-bright);font-weight:600;">${rec.status === 'cancelled' ? '—' : GM.fmt.currency(rec.grandTotal - (Number(rec.platform_comm) || 0))}</td>
             <td style="font-size:0.78rem;color:var(--text-muted);">${rec.status === 'cancelled' ? GM.fmt.date(rec.cancelledAt) : (rec.billNo || rec.id || '—')}</td>
           </tr>`).join('');
 

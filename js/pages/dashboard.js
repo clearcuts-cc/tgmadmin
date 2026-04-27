@@ -1,6 +1,7 @@
 /* dashboard.js — Dashboard page module */
 (async function () {
   const main = document.getElementById('main-content');
+  let isRendering = false;
 
   function getTimeGreeting() {
     const h = new Date().getHours();
@@ -10,6 +11,34 @@
   }
 
   async function renderDashboard() {
+    if (isRendering) return;
+    isRendering = true;
+
+    // Show immediate loading state to prevent blank screen
+    // Remove animate-in from the header so it's visible even if CSS animations fail
+    main.innerHTML = `
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Loading resort overview...</p>
+      </div>
+      <div class="page-content">
+        <div class="stat-grid">
+          <div class="stat-card" style="opacity:0.5;"><div class="stat-card__label">Loading...</div></div>
+          <div class="stat-card" style="opacity:0.5;"><div class="stat-card__label">Loading...</div></div>
+          <div class="stat-card" style="opacity:0.5;"><div class="stat-card__label">Loading...</div></div>
+          <div class="stat-card" style="opacity:0.5;"><div class="stat-card__label">Loading...</div></div>
+        </div>
+        <div class="empty-state"><span>⏳</span> Syncing with cloud...</div>
+      </div>
+    `;
+
+    try {
+      // Ensure MockData is ready
+      if (typeof MockData === 'undefined' || !MockData.isReady) {
+        console.warn('Dashboard: MockData not ready, waiting...');
+        // We'll wait a bit or just proceed if it's supposed to be ready
+      }
+
     // Compute live stats
     const cRooms = await window.RoomCache.getRooms();
     const rooms = cRooms.map(r => ({ id: r.id, number: r.room_number, type: r.room_type, floor: r.floor, rate: r.base_price_per_night }));
@@ -200,6 +229,20 @@
 
     // Handle initial responsive setup after render
     handleResize();
+    isRendering = false;
+    } catch (err) {
+      console.error('Dashboard Render Error:', err);
+      isRendering = false;
+      main.innerHTML = `
+        <div class="page-header"><h1>Dashboard Error</h1><p>Failed to load dashboard data</p></div>
+        <div class="page-content">
+          <div class="card" style="border-color:var(--red); color:var(--red);">
+            <p><strong>Error Details:</strong> ${err.message || 'Unknown error'}</p>
+            <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-secondary);">This usually happens if the database connection is interrupted or a script failed to load. Try refreshing the page.</p>
+            <button class="btn btn--primary" style="margin-top:1.5rem;" onclick="window.location.reload()">Refresh Page</button>
+          </div>
+        </div>`;
+    }
   }
 
   function handleResize() {

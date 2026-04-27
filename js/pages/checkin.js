@@ -100,7 +100,7 @@
               <div class="room-card__type">${room.type}</div>
               <div class="room-card__badge">${GM.statusBadge(st)}</div>
               <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted);opacity:0.7;">
-                ${GM.fmt.currency(room.rate)}<span style="opacity:0.6"> / night</span>
+                ${GM.fmt.currency(booking && booking.rate > 0 ? booking.rate : room.rate)}<span style="opacity:0.6"> / night</span>
               </div>
               ${guestLine}
               ${isActive ? `<div style="margin-top:0.6rem;font-size:0.72rem;color:var(--blue);font-weight:600;letter-spacing:0.06em;">TAP TO CHECK IN ›</div>` : ''}
@@ -165,8 +165,10 @@
     }
 
     const guest = MockData.getGuestById(booking.guestId);
-    const nights = GM.nights(booking.checkIn, booking.checkOut);
-    const roomTotal = nights * room.rate;
+    const nights = Math.max(1, GM.nights(booking.checkIn, booking.checkOut));
+    // Use booking's specific rate if it was overridden (> 0), otherwise fall back to room's default rate
+    const rate = (Number(booking.rate) > 0) ? Number(booking.rate) : Number(room.rate || 0);
+    const roomTotal = nights * rate;
 
     main.innerHTML = `
         <style>
@@ -198,7 +200,7 @@
                 <h4 style="margin-bottom:0.75rem;">Room Assigned</h4>
                 <div style="font-family:var(--font-display);font-size:2rem;font-weight:600;margin-bottom:0.25rem;">${room.number}</div>
                 <div style="font-size:0.85rem;color:var(--text-secondary);">${room.type}</div>
-                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">Floor ${room.floor} · ${GM.fmt.currency(room.rate)}/night</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">Floor ${room.floor} · ${GM.fmt.currency(rate)}/night</div>
               </div>
               <div class="card animate-in animate-in-delay-2">
                 <h4 style="margin-bottom:0.75rem;">Stay Summary</h4>
@@ -241,7 +243,7 @@
 
               <h4 style="margin-bottom:0.5rem; color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">Charge Breakdown</h4>
               <div class="bill-row">
-                <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(room.rate)})</span>
+                <span>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ${GM.fmt.currency(rate)})</span>
                 <strong>${GM.fmt.currency(roomTotal)}</strong>
               </div>
               <div class="bill-row" id="ci-gst-row">
@@ -384,7 +386,6 @@
             }
             
             await MockData.startStay(booking, room, method, ref, false, capturedArrival);
-            await MockData.updateBookingStatus(booking.id, 'checked_in');
 
             document.getElementById('checkin-success').classList.remove('hidden');
             document.getElementById('payment-section').classList.add('hidden');

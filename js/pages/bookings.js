@@ -36,9 +36,9 @@
               <th>Booking ID</th>
               <th>Guest Name</th>
               <th>Room</th>
-              <th>Check-in</th>
-              <th>Check-out</th>
-              <th>Nights</th>
+              <th>Rate / Night</th>
+              <th>Source</th>
+              <th>Dates</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -91,9 +91,12 @@
           <td style="font-size:0.78rem;color:var(--text-muted);">${b.displayId}</td>
           <td style="font-weight:500;">${b.guestName}</td>
           <td>Room ${GM.fmt.room(b.roomNumber)}</td>
-          <td>${GM.fmt.date(b.checkIn)}</td>
-          <td>${GM.fmt.date(b.checkOut)}</td>
-          <td>${nights}</td>
+          <td style="font-weight:600;color:var(--gold-bright);">${GM.fmt.currency(b.rate)}</td>
+          <td style="font-size:0.72rem;color:var(--teal);font-weight:700;">${(b.platform || 'Direct').toUpperCase()}</td>
+          <td style="font-size:0.78rem;">
+            ${GM.fmt.date(b.checkIn)} <span style="opacity:0.5;">to</span> ${GM.fmt.date(b.checkOut)}
+            <div style="font-size:0.7rem;color:var(--text-muted);">${nights} nights</div>
+          </td>
           <td>${GM.statusBadge(b.status)}</td>
           <td><a href="${viewLink}" class="btn btn--sm btn--ghost" style="${isCancelled ? 'visibility:hidden' : ''}">View →</a></td>
         </tr>`;

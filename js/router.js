@@ -5,10 +5,16 @@
 
 (function () {
 
-    /* ── SESSION ───────────────────────────────────────────── */
-    const sessionRaw = window.GMCookieStorage ? window.GMCookieStorage.getItem('gm_session') : localStorage.getItem('gm_session');
-    if (!sessionRaw) { window.location.replace('login.html'); return; }
-    const session = JSON.parse(sessionRaw);
+    let session = { name: 'Admin', role: 'admin' };
+    try {
+        const sessionRaw = window.GMCookieStorage ? window.GMCookieStorage.getItem('gm_session') : localStorage.getItem('gm_session');
+        if (!sessionRaw) { window.location.replace('login.html'); return; }
+        session = JSON.parse(sessionRaw);
+    } catch (e) {
+        console.error('Router: Failed to parse session:', e);
+        window.location.replace('login.html');
+        return;
+    }
 
     /* Expose role globally so all page modules + nav can read it */
     window.GMRole = (session.role || 'admin').toLowerCase();
@@ -220,6 +226,10 @@
 
         const scriptSrc = PAGE_MAP[page] || PAGE_MAP['dashboard'];
         const main = document.getElementById('main-content');
+        if (!main) return;
+
+        // Clear content immediately to avoid showing stale data from previous page
+        main.innerHTML = '';
 
         // Fade out
         main.style.opacity = '0';
@@ -263,6 +273,16 @@
 
         document.body.appendChild(script);
         currentPageScript = script;
+
+        // Safety timeout: If script doesn't fire onload within 3s, force opacity 1
+        // (prevents permanent blank screen if script crashes or 404s)
+        setTimeout(() => {
+            if (main.style.opacity === '0') {
+                console.warn('Router: Script load timeout, forcing visibility');
+                main.style.opacity = '1';
+                main.style.transform = 'translateY(0)';
+            }
+        }, 3000);
     }
 
     /* ── PARAM HELPER ───────────────────────────────────────── */

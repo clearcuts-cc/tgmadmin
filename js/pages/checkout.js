@@ -137,8 +137,8 @@
     }
 
     const stay = MockData.getStayByBookingId(booking.id);
-    const nights = GM.nights(booking.checkIn, booking.checkOut);
-    const rate = room.rate;
+    const nights = Math.max(1, GM.nights(booking.checkIn, booking.checkOut));
+    const rate = stay ? Number(stay.rate) : ((Number(booking.rate) > 0) ? Number(booking.rate) : Number(room.rate || 0));
 
     // Build payments
     let payments = [];
@@ -229,6 +229,13 @@
           </div>
         </div>
         <div class="page-content" style="padding-top:0;">
+          
+          <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.03); padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+            <label style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; user-select: none;">
+              <input type="checkbox" id="customer-view-toggle" style="width:16px; height:16px; cursor:pointer;">
+              <strong>Customer Copy</strong> (Hides internal commissions)
+            </label>
+          </div>
 
           <div id="bill-print-area">
             <div class="receipt-bill animate-in">
@@ -270,6 +277,18 @@
                   <span class="rb-info-label">CHECK-OUT · NIGHTS</span>
                   <span class="rb-info-value">${GM.fmt.date(booking.checkOut)} ${booking.checkOutTime ? '@ ' + booking.checkOutTime : ''} · ${nights} nights</span>
                 </div>
+              </div>
+
+              <div class="rb-info-grid" id="rb-header-platform-info" style="margin-top: 0.5rem; background: rgba(0,0,0,0.02); padding: 0.5rem; border-radius: 4px; border: 1px dashed #e0e0e0;">
+                <div class="rb-info-col">
+                  <span class="rb-info-label">BOOKING SOURCE</span>
+                  <span class="rb-info-value" style="color:var(--teal); font-weight:700;">${booking.platform || 'Direct'}</span>
+                </div>
+                ${booking.platform_comm > 0 ? `
+                <div class="rb-info-col">
+                  <span class="rb-info-label">PLATFORM COMMISSION</span>
+                  <span class="rb-info-value" style="color:#b45309;">${GM.fmt.currency(booking.platform_comm)}</span>
+                </div>` : ''}
               </div>
 
               <div class="rb-divider-full"></div>
@@ -384,11 +403,18 @@
                   </div>
                   <span class="rb-row-amount" id="summary-checkin-amt" style="color:#166534;">-${GM.fmt.currency(roomPaymentsTotal)}</span>
                 </div>
+                ${booking.platform_comm > 0 ? `
+                <div class="rb-row" id="rb-summary-platform" style="border-bottom:none;">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">${booking.platform} Comm. (Deduction)</span>
+                  </div>
+                  <span class="rb-row-amount" id="summary-platform-amt" style="color:#b45309;">-${GM.fmt.currency(booking.platform_comm)}</span>
+                </div>` : ''}
               </div>
 
               <div class="rb-total-row" style="border-top: 1px dashed #e0e0e0; margin-top: 0.5rem;">
                 <span class="rb-total-label">Net Payable Amount</span>
-                <span class="rb-total-amount" id="grand-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal))}</span>
+                <span class="rb-total-amount" id="grand-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - (booking.platform_comm || 0)))}</span>
               </div>
               
               <div id="net-room-balance" style="display:none;"></div>
@@ -397,7 +423,7 @@
 
               <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
                 <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
-                <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(roomChargeTotal + servicesTotal)}</div>
+                <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal + servicesTotal - (booking.platform_comm || 0)))}</div>
                 <div style="font-size: 0.85rem; font-weight: 600; color: #000; margin-top: 0.5rem;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
               </div>
 
@@ -565,8 +591,19 @@
       const grossEl = document.getElementById('gross-total-display');
       if (grossEl) grossEl.textContent = GM.fmt.currency(currentGross);
       
+      const platformComm = Number(booking.platform_comm) || 0;
+      const isCustomerView = document.getElementById('customer-view-toggle').checked;
+      
+      const headerPlatform = document.getElementById('rb-header-platform-info');
+      if (headerPlatform) {
+        headerPlatform.style.display = isCustomerView ? 'none' : 'grid';
+      }
+
+      const platformRow = document.getElementById('rb-summary-platform');
+      if (platformRow) platformRow.style.display = (platformComm > 0 && !isCustomerView) ? 'flex' : 'none';
+
       const overallTotalEl = document.getElementById('overall-total-display');
-      const overallDiscountedTotal = Math.max(0, currentGross - disc);
+      const overallDiscountedTotal = Math.max(0, currentGross - disc - (isCustomerView ? 0 : platformComm));
       if (overallTotalEl) overallTotalEl.textContent = GM.fmt.currency(overallDiscountedTotal);
 
       const srvAmtEl = document.getElementById('summary-services-amt');
@@ -578,7 +615,7 @@
         if (srvRow) srvRow.style.display = totalSettled > 0 ? 'flex' : 'none';
       }
 
-      const roomBal = Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal);
+      const roomBal = Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - platformComm);
       const netRoomEl = document.getElementById('net-room-balance');
       if (netRoomEl) netRoomEl.textContent = GM.fmt.currency(roomBal);
 
@@ -613,6 +650,7 @@
     }
     discountInput.addEventListener('input', calcBalance);
     document.getElementById('paid-now').addEventListener('input', calcBalance);
+    document.getElementById('customer-view-toggle').addEventListener('change', calcBalance);
     calcBalance();
 
     function syncPrintValues() {

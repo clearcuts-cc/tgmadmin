@@ -124,6 +124,7 @@ const MockData = (() => {
             status: b.status || 'confirmed',
             specialRequests: b.special_requests || '',
             platform: b.platform || 'Direct',
+            platform_comm: Number(b.platform_comm) || 0,
             rate: Number(b.rate) || 0, nights: b.nights || 1,
             advance_paid: Number(b.advance_paid) || 0,
             cancelledAt: b.cancelled_at || null,
@@ -434,6 +435,8 @@ const MockData = (() => {
                 children: Number(bookingData.children) || 0,
                 status: bookingData.status || 'confirmed',
                 specialRequests: bookingData.specialRequests || '',
+                platform: bookingData.platform || 'Direct',
+                platform_comm: Number(bookingData.platform_comm) || 0,
                 rate: Number(bookingData.rate) || 0,
                 nights: Number(bookingData.nights) || 1,
                 advance_paid: Number(bookingData.advance_paid) || 0,
@@ -478,6 +481,8 @@ const MockData = (() => {
                     GM.toast('Failed to update booking status', 'error');
                     throw error;
                 }
+                // Explicitly fire event to update UI immediately
+                fireChangeEvent('bookings');
             } catch (err) {
                 console.error('updateBookingStatus exception:', err);
                 throw err;
@@ -690,6 +695,8 @@ const MockData = (() => {
                     grand_total: Number(record.grandTotal) || 0,
                     status: record.status || 'completed',
                     completed_at: record.completedAt || new Date().toISOString(),
+                    platform: record.platform || 'Direct',
+                    platform_comm: Number(record.platform_comm) || 0,
                 });
                 if (error) {
                     console.error('addHistory error:', error);
@@ -708,7 +715,8 @@ const MockData = (() => {
 
         async startStay(booking, room, paymentMethod, paymentRef, isDeferred = false, actualArrival = null) {
             const n = MockData.nightsBetween(booking.checkIn, booking.checkOut);
-            const subtotal = n * room.rate;
+            const rate = (Number(booking.rate) > 0) ? Number(booking.rate) : Number(room.rate || 0);
+            const subtotal = n * rate;
             const enableGST = window.GMSettings ? window.GMSettings.get('enableGST') : true;
             const roomGST = enableGST ? (window.GMSettings ? window.GMSettings.get('roomGST') : 12) : 0;
             const gstAmount = Math.round(subtotal * (roomGST / 100));
@@ -730,10 +738,12 @@ const MockData = (() => {
                 checkOutTime: booking.checkOutTime,
                 actualArrivalTime: actualArrival,
                 nights: Number(n),
-                rate: Number(room.rate),
+                rate: Number(rate),
+                platform: booking.platform || 'Direct',
+                platform_comm: Number(booking.platform_comm) || 0,
                 payments: isDeferred ? [] : [{
                     _dbId: paymentDbId, type: 'room',
-                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(room.rate)})` + (enableGST ? ` + GST ${roomGST}%` : '') + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),
+                    description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(rate)})` + (enableGST ? ` + GST ${roomGST}%` : '') + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),
                     amount: Number(collectionAmount),
                     paidAt: new Date().toISOString(),
                     method: paymentMethod, ref: paymentRef || '',
@@ -751,7 +761,7 @@ const MockData = (() => {
                     checkout_time: booking.checkOutTime,
                     actual_arrival_time: actualArrival,
                     nights: Number(n),
-                    rate: Number(room.rate),
+                    rate: Number(rate),
                 });
 
                 if (error) {
@@ -775,7 +785,6 @@ const MockData = (() => {
                 }
 
                 // Record advance payment as a negative deduction if booking had advance
-                const advancePaid = Number(booking.advance_paid) || 0;
                 if (advancePaid > 0) {
                     const advDbId = crypto.randomUUID();
                     const advPayment = {
@@ -794,6 +803,11 @@ const MockData = (() => {
                 }
 
                 _cache.activeStays[booking.id] = stay;
+                
+                // ALSO update the booking status to checked_in automatically
+                await this.updateBookingStatus(booking.id, 'checked_in');
+                
+                fireChangeEvent('active_stays');
                 return stay;
             } catch (err) {
                 console.error('startStay exception:', err);
@@ -871,6 +885,8 @@ const MockData = (() => {
                 payments: [...stay.payments],
                 extraCharge, discount, grandTotal,
                 status: 'completed', completedAt: new Date().toISOString(),
+                platform: booking?.platform || 'Direct',
+                platform_comm: Number(booking?.platform_comm) || 0,
             };
 
             // ARCHIVE to history FIRST (await this)
