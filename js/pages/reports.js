@@ -26,7 +26,8 @@
       const k = monthKey(rec.checkIn);
       if (!k) return;
       occupancyMap[k] = (occupancyMap[k] || 0) + (rec.nights || 0);
-      revenueMap[k] = (revenueMap[k] || 0) + (rec.grandTotal || 0) - (Number(rec.platform_comm) || 0);
+      const comm = (Number(rec.platform_comm) || 0) + (Number(rec.agentComm) || 0);
+      revenueMap[k] = (revenueMap[k] || 0) + (rec.grandTotal || 0) - comm;
       guestCountMap[k] = (guestCountMap[k] || 0) + 1;
     });
 
@@ -38,8 +39,13 @@
       if (!k) return;
       occupancyMap[k] = (occupancyMap[k] || 0) + (stay.nights || 0);
       // For revenue, we sum their current payments
-      const stayRev = stay.payments.reduce((s, p) => s + p.amount, 0);
-      revenueMap[k] = (revenueMap[k] || 0) + stayRev - (Number(stay.platform_comm) || 0);
+      const stayRev = stay.payments ? stay.payments.reduce((s, p) => s + p.amount, 0) : 0;
+      
+      // Look up booking for commissions
+      const booking = MockData.bookings.find(b => b.id === stay.bookingId);
+      const stayComm = booking ? ((Number(booking.platform_comm) || 0) + (Number(booking.agentComm) || 0)) : 0;
+      
+      revenueMap[k] = (revenueMap[k] || 0) + stayRev - stayComm;
       guestCountMap[k] = (guestCountMap[k] || 0) + 1;
     });
 

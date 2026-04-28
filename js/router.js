@@ -190,6 +190,7 @@
         'export': 'js/pages/export.js',
         'settings': 'js/pages/settings.js',
         'employees': 'js/pages/employees.js',
+        'agents': 'js/pages/agents.js',
     };
 
     /* Admin-only pages: redirect employees to dashboard */

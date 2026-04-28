@@ -90,15 +90,33 @@
                   <span class="form-error" id="room-err">Please select a room.</span>
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="platformSelect">Booking Platform</label>
-                  <select class="form-select" id="platformSelect">
-                    <option value="">— Direct —</option>
-                    <!-- Injected by JS -->
+                  <label class="form-label" for="bookingSource">Booking Source <span class="req">*</span></label>
+                  <select class="form-select" id="bookingSource" required>
+                    <option value="direct">Direct</option>
+                    <!-- Platforms injected here -->
+                    <option value="agent">Commission Based (Agent)</option>
                   </select>
                 </div>
-                <div class="form-group" id="commission-row" style="display:none;">
-                  <label class="form-label" for="platformCommAmt">Commission Amount (₹) <span style="font-size:0.65rem;opacity:0.5;font-weight:400;">(Optional)</span></label>
-                  <input class="form-input" type="number" id="platformCommAmt" placeholder="e.g. 500" min="0" step="1">
+                <!-- platform-select-row removed as it's now flat -->
+                <div class="form-group" id="agent-select-row" style="display:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                    <label class="form-label" for="agentSelect" style="margin-bottom:0;">Select Agent Partner</label>
+                    <a href="#agents" style="font-size:0.7rem; color:var(--gold-bright);">+ Add New Agent</a>
+                  </div>
+                  <select class="form-select" id="agentSelect">
+                    <option value="">— Select Agent —</option>
+                  </select>
+                </div>
+                <div class="form-group" id="commission-row" style="display:none; grid-column: 1/-1;">
+                  <label class="form-label" for="commAmt">Commission Amount (₹)</label>
+                  <input class="form-input" type="number" id="commAmt" placeholder="e.g. 500" min="0" step="1">
+                </div>
+                <div class="form-group" style="grid-column: 1/-1;">
+                  <label class="form-label" for="manual-rate">Room Price (Per Night) <span class="req">*</span></label>
+                  <div style="position:relative;">
+                    <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,0.4);">₹</span>
+                    <input class="form-input" type="number" id="manual-rate" placeholder="0" style="padding-left:28px;" required>
+                  </div>
                 </div>
               </div>
               <div class="form-grid form-grid--2">
@@ -126,13 +144,7 @@
 
               <!-- Stay summary -->
               <div id="stay-summary" style="background:var(--bg-raised);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:0.75rem;display:none;">
-                <div class="bill-row"><span>Nights</span><strong id="sum-nights">—</strong></div>
-                <div class="bill-row"><span>Rate per night</span>
-                  <div style="display:flex;align-items:center;gap:0.3rem;">
-                    <span style="font-size:0.8rem;opacity:0.7;">₹</span>
-                    <input type="number" id="manual-rate" class="form-input" style="width:90px;height:28px;padding:2px 6px;text-align:right;font-weight:700;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);" placeholder="0">
-                  </div>
-                </div>
+                <div class="bill-row"><span>Stay Duration</span><strong id="sum-nights">—</strong></div>
                 <div class="bill-row" style="border-top:1px dashed var(--border);margin-top:0.4rem;padding-top:0.4rem;">
                   <span>Subtotal</span><strong id="sum-subtotal">—</strong>
                 </div>
@@ -209,23 +221,39 @@
     roomSelect.appendChild(opt);
   });
 
-  // Populate Booking Platforms from GMSettings
-  const platformSelect = document.getElementById('platformSelect');
+  // Populate Booking Source with Platforms and Agents
+  const bookingSource = document.getElementById('bookingSource');
+  const agentRow = document.getElementById('agent-select-row');
+  const agentSelect = document.getElementById('agentSelect');
   const commRow = document.getElementById('commission-row');
-  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : ['Direct', 'Agoda', 'Booking.com', 'MakeMyTrip', 'Goibibo', 'Airbnb'];
   
-  // Clear any existing options first (keep only the 'Direct' default)
-  platformSelect.innerHTML = '<option value="">— Direct —</option>';
+  const platforms = window.GMSettings ? window.GMSettings.get('bookingPlatforms') : ['Agoda', 'Booking.com', 'MakeMyTrip', 'Goibibo', 'Airbnb'];
   
-  platforms.filter(p => p !== 'Direct').forEach(p => {
+  // Find the agent option to insert platforms before it
+  const agentOpt = Array.from(bookingSource.options).find(o => o.value === 'agent');
+  
+  platforms.forEach(p => {
+    const lowerP = p.toLowerCase();
+    if (lowerP.includes('commission') || lowerP.includes('commision') || lowerP.includes('agent')) return;
+    
     const opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
-    platformSelect.appendChild(opt);
+    opt.value = p; opt.textContent = p;
+    bookingSource.insertBefore(opt, agentOpt);
   });
 
-  platformSelect.addEventListener('change', () => {
-    commRow.style.display = platformSelect.value ? 'block' : 'none';
+  const agents = MockData.agents || [];
+  agents.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id; opt.textContent = `${a.name} (${a.phone})`;
+    agentSelect.appendChild(opt);
+  });
+
+  bookingSource.addEventListener('change', () => {
+    const src = bookingSource.value;
+    // Show agent selector only for 'agent'
+    agentRow.style.display = src === 'agent' ? 'block' : 'none';
+    // Show commission field for anything NOT 'direct'
+    commRow.style.display = src !== 'direct' ? 'block' : 'none';
   });
 
   // Aadhaar auto-format + returning guest auto-fetch
@@ -541,8 +569,10 @@
           checkIn, checkOut, checkInTime, checkOutTime, adults, children,
           status: 'confirmed',
           specialRequests: special,
-          platform: platformSelect.value || 'Direct',
-          platform_comm: platformSelect.value ? (parseFloat(document.getElementById('platformCommAmt').value) || 0) : 0,
+          platform: bookingSource.value,
+          platform_comm: bookingSource.value !== 'direct' && bookingSource.value !== 'agent' ? (parseFloat(document.getElementById('commAmt').value) || 0) : 0,
+          agentId: bookingSource.value === 'agent' ? agentSelect.value : null,
+          agentComm: bookingSource.value === 'agent' ? (parseFloat(document.getElementById('commAmt').value) || 0) : 0,
           rate: parseFloat(document.getElementById('manual-rate').value) || (selectedRoom ? selectedRoom.rate : 0),
           nights,
           advance_paid: advancePaid,

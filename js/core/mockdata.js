@@ -16,6 +16,7 @@ const MockData = (() => {
         orders: [],
         events: [],
         history: [],
+        agents: [],
         activeStays: {},
         roomStatuses: {},
     };
@@ -34,13 +35,14 @@ const MockData = (() => {
                 localStorage.setItem('gm_user_email', session.user.email);
             }
 
-            const [g, b, m, o, e, h, s, sp, rs] = await Promise.all([
+            const [g, b, m, o, e, h, ag, s, sp, rs] = await Promise.all([
                 db().from('guests').select('*'),
                 db().from('bookings').select('*'),
                 db().from('menu_items').select('*'),
                 db().from('orders').select('*'),
                 db().from('events').select('*'),
                 db().from('billing_history').select('*').order('completed_at', { ascending: false }),
+                db().from('agents').select('*'),
                 db().from('active_stays').select('*'),
                 db().from('stay_payments').select('*'),
                 db().from('room_status_overrides').select('*'),
@@ -52,6 +54,7 @@ const MockData = (() => {
             _cache.orders = (o.data || []).map(normalizeOrder);
             _cache.events = (e.data || []).map(normalizeEvent);
             _cache.history = (h.data || []).map(normalizeHistory);
+            _cache.agents = (ag.data || []).map(normalizeAgent);
 
             // Build activeStays map keyed by booking_id
             const stays = s.data || [];
@@ -111,6 +114,15 @@ const MockData = (() => {
             totalStays: g.total_stays || 0, lastStay: g.last_stay || null,
         };
     }
+    function normalizeAgent(a) {
+        return {
+            id: a.id, name: a.name, phone: a.phone, address: a.address || '',
+            aadhaar: a.aadhaar || '', aadhaarUrl: a.aadhaar_url || '',
+            totalComm: Number(a.total_comm) || 0,
+            status: a.status || 'active',
+            createdAt: a.created_at,
+        };
+    }
     function normalizeBooking(b) {
         return {
             id: b.id,
@@ -125,6 +137,8 @@ const MockData = (() => {
             specialRequests: b.special_requests || '',
             platform: b.platform || 'Direct',
             platform_comm: Number(b.platform_comm) || 0,
+            agentId: b.agent_id || null,
+            agentComm: Number(b.agent_comm) || 0,
             rate: Number(b.rate) || 0, nights: b.nights || 1,
             advance_paid: Number(b.advance_paid) || 0,
             cancelledAt: b.cancelled_at || null,
@@ -169,6 +183,7 @@ const MockData = (() => {
             payments: h.payments || [], extraCharge: Number(h.extra_charge) || 0,
             discount: Number(h.discount) || 0, grandTotal: Number(h.grand_total) || 0,
             status: h.status || 'completed', completedAt: h.completed_at,
+            agentId: h.agent_id || null, agentComm: Number(h.agent_comm) || 0,
         };
     }
 
@@ -183,6 +198,7 @@ const MockData = (() => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, p => handleRealtimeChange('orders', p, normalizeOrder))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, p => handleRealtimeChange('events', p, normalizeEvent))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'billing_history' }, p => handleRealtimeChange('history', p, normalizeHistory))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, p => handleRealtimeChange('agents', p, normalizeAgent))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'active_stays' }, async () => {
                 const { data } = await db().from('active_stays').select('*');
                 const { data: pData } = await db().from('stay_payments').select('*');
@@ -286,6 +302,7 @@ const MockData = (() => {
         get orders() { return _cache.orders; },
         get events() { return _cache.events; },
         get history() { return _cache.history; },
+        get agents() { return _cache.agents; },
 
         // ── ROOM STATUS ──────────────────────────────────────────
         getRoomStatus: computeRoomStatus,
@@ -304,6 +321,7 @@ const MockData = (() => {
         getGuestById: (id) => _cache.guests.find(g => g.id === id),
         getBookingById: (id) => _cache.bookings.find(b => b.id === id),
         getEventById: (id) => _cache.events.find(e => e.id === id),
+        getAgentById: (id) => _cache.agents.find(a => a.id === id),
         findActiveBookingByGuestName(name) {
             const n = name.toLowerCase();
             const stay = Object.values(_cache.activeStays).find(s => s.guestName.toLowerCase() === n);
@@ -386,6 +404,60 @@ const MockData = (() => {
                 if (error) console.error('deleteGuest error:', error);
             });
         },
+        
+        // ── AGENT CRUD ───────────────────────────────────────────
+        async addAgent(agentData) {
+            const agent = {
+                id: agentData.id || crypto.randomUUID(),
+                name: agentData.name, phone: agentData.phone,
+                address: agentData.address || '',
+                aadhaar: agentData.aadhaar || '',
+                aadhaarUrl: agentData.aadhaarUrl || '',
+                totalComm: 0,
+                status: 'active',
+                createdAt: new Date().toISOString(),
+            };
+            try {
+                const { error } = await db().from('agents').insert({
+                    id: agent.id, name: agent.name, phone: agent.phone,
+                    address: agent.address, aadhaar: agent.aadhaar,
+                    aadhaar_url: agent.aadhaarUrl,
+                    total_comm: 0, status: 'active'
+                });
+                if (error) throw error;
+                _cache.agents.push(agent);
+                GM.toast('Agent added successfully', 'success');
+                return agent;
+            } catch (err) {
+                console.error('addAgent error:', err);
+                GM.toast('Failed to save agent', 'error');
+                throw err;
+            }
+        },
+        async updateAgent(id, updates) {
+            const idx = _cache.agents.findIndex(a => a.id === id);
+            if (idx !== -1) _cache.agents[idx] = { ..._cache.agents[idx], ...updates };
+            
+            const dbUpdates = {};
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+            if (updates.address !== undefined) dbUpdates.address = updates.address;
+            if (updates.aadhaar !== undefined) dbUpdates.aadhaar = updates.aadhaar;
+            if (updates.aadhaarUrl !== undefined) dbUpdates.aadhaar_url = updates.aadhaarUrl;
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.totalComm !== undefined) dbUpdates.total_comm = updates.totalComm;
+
+            try {
+                const { error } = await db().from('agents').update(dbUpdates).eq('id', id);
+                if (error) throw error;
+            } catch (err) {
+                console.error('updateAgent error:', err);
+            }
+        },
+        deleteAgent(id) {
+            _cache.agents = _cache.agents.filter(a => a.id !== id);
+            db().from('agents').delete().eq('id', id).then();
+        },
 
         // ── STORAGE ──────────────────────────────────────────────
         async uploadGuestDocument(file, fileName) {
@@ -437,6 +509,8 @@ const MockData = (() => {
                 specialRequests: bookingData.specialRequests || '',
                 platform: bookingData.platform || 'Direct',
                 platform_comm: Number(bookingData.platform_comm) || 0,
+                agent_id: bookingData.agentId || null,
+                agent_comm: Number(bookingData.agentComm) || 0,
                 rate: Number(bookingData.rate) || 0,
                 nights: Number(bookingData.nights) || 1,
                 advance_paid: Number(bookingData.advance_paid) || 0,
@@ -452,6 +526,8 @@ const MockData = (() => {
                     status: booking.status, special_requests: booking.specialRequests,
                     platform: booking.platform,
                     platform_comm: booking.platform_comm,
+                    agent_id: booking.agentId || null,
+                    agent_comm: booking.agentComm || 0,
                     rate: booking.rate, nights: booking.nights,
                     advance_paid: booking.advance_paid || 0,
                 });
@@ -697,6 +773,8 @@ const MockData = (() => {
                     completed_at: record.completedAt || new Date().toISOString(),
                     platform: record.platform || 'Direct',
                     platform_comm: Number(record.platform_comm) || 0,
+                    agent_id: record.agentId || null,
+                    agent_comm: Number(record.agentComm) || 0,
                 });
                 if (error) {
                     console.error('addHistory error:', error);
@@ -741,6 +819,8 @@ const MockData = (() => {
                 rate: Number(rate),
                 platform: booking.platform || 'Direct',
                 platform_comm: Number(booking.platform_comm) || 0,
+                agentId: booking.agentId || null,
+                agentComm: Number(booking.agentComm) || 0,
                 payments: isDeferred ? [] : [{
                     _dbId: paymentDbId, type: 'room',
                     description: `Room charges (${n} night${n > 1 ? 's' : ''} × ${MockData.formatCurrency(rate)})` + (enableGST ? ` + GST ${roomGST}%` : '') + (advancePaid > 0 ? ` (Less Advance ₹${advancePaid})` : ''),

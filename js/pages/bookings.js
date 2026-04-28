@@ -37,6 +37,7 @@
               <th>Guest Name</th>
               <th>Room</th>
               <th>Rate / Night</th>
+              <th>Commission</th>
               <th>Source</th>
               <th>Dates</th>
               <th>Status</th>
@@ -79,7 +80,8 @@
     emptyState.classList.add('hidden');
 
     tbody.innerHTML = filtered.map(b => {
-      const nights = GM.nights(b.checkIn, b.checkOut);
+      const nights = Math.max(1, GM.nights(b.checkIn, b.checkOut));
+      const comm = (b.platform_comm || 0) + (b.agentComm || 0);
       const viewLink = b.status === 'due_checkout'
         ? `#checkout?booking=${b.id}`
         : b.status === 'confirmed'
@@ -91,7 +93,14 @@
           <td style="font-size:0.78rem;color:var(--text-muted);">${b.displayId}</td>
           <td style="font-weight:500;">${b.guestName}</td>
           <td>Room ${GM.fmt.room(b.roomNumber)}</td>
-          <td style="font-weight:600;color:var(--gold-bright);">${GM.fmt.currency(b.rate)}</td>
+          <td>
+            <div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;">${GM.fmt.currency(b.rate)}</div>
+            <div style="font-size:0.7rem;color:var(--gold-bright);font-weight:600;">Net: ${GM.fmt.currency(b.rate - (comm / nights))}</div>
+          </td>
+          <td style="color:var(--red);font-size:0.8rem;font-weight:500;">
+            ${comm > 0 ? `-${GM.fmt.currency(comm)}` : '—'}
+            <div style="font-size:0.65rem;opacity:0.6;">(Total)</div>
+          </td>
           <td style="font-size:0.72rem;color:var(--teal);font-weight:700;">${(b.platform || 'Direct').toUpperCase()}</td>
           <td style="font-size:0.78rem;">
             ${GM.fmt.date(b.checkIn)} <span style="opacity:0.5;">to</span> ${GM.fmt.date(b.checkOut)}

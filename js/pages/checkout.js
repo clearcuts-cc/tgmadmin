@@ -140,6 +140,9 @@
     const nights = Math.max(1, GM.nights(booking.checkIn, booking.checkOut));
     const rate = stay ? Number(stay.rate) : ((Number(booking.rate) > 0) ? Number(booking.rate) : Number(room.rate || 0));
 
+    const agent = booking.agentId ? MockData.getAgentById(booking.agentId) : null;
+    const agentName = agent ? agent.name : 'Unknown Agent';
+
     // Build payments
     let payments = [];
     if (stay) {
@@ -289,6 +292,11 @@
                   <span class="rb-info-label">PLATFORM COMMISSION</span>
                   <span class="rb-info-value" style="color:#b45309;">${GM.fmt.currency(booking.platform_comm)}</span>
                 </div>` : ''}
+                ${booking.agentComm > 0 ? `
+                <div class="rb-info-col">
+                  <span class="rb-info-label">AGENT COMMISSION</span>
+                  <span class="rb-info-value" style="color:#b45309;">${GM.fmt.currency(booking.agentComm)}</span>
+                </div>` : ''}
               </div>
 
               <div class="rb-divider-full"></div>
@@ -408,13 +416,20 @@
                   <div class="rb-row-left">
                     <span class="rb-row-title">${booking.platform} Comm. (Deduction)</span>
                   </div>
-                  <span class="rb-row-amount" id="summary-platform-amt" style="color:#b45309;">-${GM.fmt.currency(booking.platform_comm)}</span>
+                  <span class="rb-row-amount" style="color:#b45309;">-${GM.fmt.currency(booking.platform_comm)}</span>
+                </div>` : ''}
+                ${booking.agentComm > 0 ? `
+                <div class="rb-row" id="rb-summary-agent" style="border-bottom:none;">
+                  <div class="rb-row-left">
+                    <span class="rb-row-title">Agent Comm. (${agentName})</span>
+                  </div>
+                  <span class="rb-row-amount" style="color:#b45309;">-${GM.fmt.currency(booking.agentComm)}</span>
                 </div>` : ''}
               </div>
 
               <div class="rb-total-row" style="border-top: 1px dashed #e0e0e0; margin-top: 0.5rem;">
                 <span class="rb-total-label">Net Payable Amount</span>
-                <span class="rb-total-amount" id="grand-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - (booking.platform_comm || 0)))}</span>
+                <span class="rb-total-amount" id="grand-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - (booking.platform_comm || 0) - (booking.agentComm || 0)))}</span>
               </div>
               
               <div id="net-room-balance" style="display:none;"></div>
@@ -423,7 +438,7 @@
 
               <div class="rb-overall-amount-box" style="border: 2px solid #000; background: #f8f8f8; color: #000; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; border-radius: 4px; -webkit-print-color-adjust: exact;">
                 <div style="font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000;">Overall Bill Amount</div>
-                <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal + servicesTotal - (booking.platform_comm || 0)))}</div>
+                <div style="font-size: 2.2rem; font-weight: 900; color: #000;" id="overall-total-display">${GM.fmt.currency(Math.max(0, roomChargeTotal + servicesTotal - (booking.platform_comm || 0) - (booking.agentComm || 0)))}</div>
                 <div style="font-size: 0.85rem; font-weight: 600; color: #000; margin-top: 0.5rem;">Contact: ${s.resortPhone || '+91 9944033765'}</div>
               </div>
 
@@ -592,6 +607,8 @@
       if (grossEl) grossEl.textContent = GM.fmt.currency(currentGross);
       
       const platformComm = Number(booking.platform_comm) || 0;
+      const agentComm = Number(booking.agentComm) || 0;
+      const totalComm = platformComm + agentComm;
       const isCustomerView = document.getElementById('customer-view-toggle').checked;
       
       const headerPlatform = document.getElementById('rb-header-platform-info');
@@ -602,8 +619,11 @@
       const platformRow = document.getElementById('rb-summary-platform');
       if (platformRow) platformRow.style.display = (platformComm > 0 && !isCustomerView) ? 'flex' : 'none';
 
+      const agentRow = document.getElementById('rb-summary-agent');
+      if (agentRow) agentRow.style.display = (agentComm > 0 && !isCustomerView) ? 'flex' : 'none';
+
       const overallTotalEl = document.getElementById('overall-total-display');
-      const overallDiscountedTotal = Math.max(0, currentGross - disc - (isCustomerView ? 0 : platformComm));
+      const overallDiscountedTotal = Math.max(0, currentGross - disc - (isCustomerView ? 0 : totalComm));
       if (overallTotalEl) overallTotalEl.textContent = GM.fmt.currency(overallDiscountedTotal);
 
       const srvAmtEl = document.getElementById('summary-services-amt');
@@ -615,7 +635,7 @@
         if (srvRow) srvRow.style.display = totalSettled > 0 ? 'flex' : 'none';
       }
 
-      const roomBal = Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - platformComm);
+      const roomBal = Math.max(0, roomChargeTotal - advanceTotal - roomPaymentsTotal - (isCustomerView ? 0 : totalComm));
       const netRoomEl = document.getElementById('net-room-balance');
       if (netRoomEl) netRoomEl.textContent = GM.fmt.currency(roomBal);
 
